@@ -1,0 +1,6 @@
+pyNNsMD            -> general NN functions
+nn_scripts         -> NN and reruns #####
+submit_scripts     -> submit the NN jobs to the server #####
+evaluation_scripts -> evaluate results
+
+##### -> add this to your PATH
