@@ -32,6 +32,8 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 
 import numpy as np
 from sklearn.model_selection import KFold
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score, mean_absolute_error
 
 # Number of folds for cross-validation
 n_folds = 3
@@ -58,6 +60,7 @@ for train_index, test_index in kf.split(x):
     y_test = tf.convert_to_tensor(y_test)
 
     # Scale the output data
+    scaler = StandardScaler(with_std=False)
     scaler.fit(y_train)
     y_train_scaled = scaler.transform(y_train)
     y_test_scaled = scaler.transform(y_test)
