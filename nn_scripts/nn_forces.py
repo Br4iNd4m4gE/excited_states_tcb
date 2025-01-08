@@ -73,18 +73,18 @@ hp = kt.HyperParameters()
 
 class WrapModel(keras.Model):
 	#important to save model for MLMM
-	def __init__(self,model,mean,var):
+	def __init__(self, model, mean, var):
 		super().__init__()
 		self.submodel = model
 		self.mean = mean
 		self.std = tf.sqrt(var)
 	def call(self,inputs):
 		outputs = self.submodel(inputs)
-		outputs_rescaled = self.std*outputs + self.mean
+		outputs_rescaled = self.std * outputs + self.mean
 		return outputs_rescaled
 
 class CustomModel(keras.Model):
-	def call(self,inputs,**kwargs):
+	def call(self, inputs, **kwargs):
 		with tf.GradientTape() as tape:
 			tape.watch(inputs)
 			outputs = super().call(inputs)
@@ -312,17 +312,17 @@ eval = best_model.evaluate(x_test, y_test_scaled)
 
 #Save models
 best_model.save("best_model")
-mlmm_model = WrapModel(best_model,scaler.mean_, 1.0)
+mlmm_model = WrapModel(best_model, scaler.mean_, 1.0)
 test_pred_rescaled = mlmm_model(x_test)
 mlmm_model.save("mlmm_model")
 
 #Print Performance
-forces_pred = K.flatten(test_pred_rescaled[:,1:])
-forces_test = K.flatten(y_test[:,1:])
+forces_pred = K.flatten(test_pred_rescaled[:, 1:])
+forces_test = K.flatten(y_test[:, 1:])
 print("R2 Total Energy:")
-print(r2_score(y_test[:,0], test_pred_rescaled[:,0]))
+print(r2_score(y_test[:, 0], test_pred_rescaled[:, 0]))
 print("MAE Total Energy:")
-mae_te = mean_absolute_error(y_test[:,0], test_pred_rescaled[:,0])
+mae_te = mean_absolute_error(y_test[:, 0], test_pred_rescaled[:, 0])
 print(mae_te, ' eV')
 print("R2 Forces:")
 print(r2_score(forces_test, forces_pred))
@@ -333,14 +333,14 @@ print("MAE Forces/STD Forces in %:")
 print(100 * mae_forces / force_std)
 
 #Save predictions and references for test data
-np.savetxt("energy_predictions.txt", test_pred_rescaled[:,0])
+np.savetxt("energy_predictions.txt", test_pred_rescaled[:, 0])
 np.savetxt("force_predictions.txt", forces_pred)
-np.savetxt("energy_ref.txt", y_test[:,0])
+np.savetxt("energy_ref.txt", y_test[:, 0])
 np.savetxt("force_ref.txt", forces_test)
 
 #Plot
 #Loss curve
-ep = np.arange(1, len(losses)+1)
+ep = np.arange(1, len(losses) + 1)
 plt.semilogy(ep,losses, label="loss")
 plt.semilogy(ep, val_losses, label="val_loss")
 plt.legend()
@@ -354,8 +354,8 @@ plt.hist2d(y_test[:,0], test_pred_rescaled[:,0], bins=100, cmin=1, cmap='inferno
 plt.xlabel('True Values [Eh]')
 plt.ylabel('Predictions [Eh]')
 plt.colorbar()
-plt.plot([min(y_test[:,0]),max(y_test[:,0])],[min(y_test[:,0]),max(y_test[:,0])])
-plt.savefig("tot_ene.png",dpi=300)
+plt.plot([min(y_test[:,0]),max(y_test[:,0])], [min(y_test[:,0]), max(y_test[:,0])])
+plt.savefig("tot_ene.png", dpi=300)
 plt.clf()
 
 #Forces 1

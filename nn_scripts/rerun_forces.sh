@@ -7,7 +7,7 @@ from os.path import join, isdir, isfile, dirname, abspath
 import os
 # sys.path.append("/home/cschmidt/bin/excited_states_networks") # pyNNsMD
 sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import parse_single_file, import extract_number_of_atoms, get_file_length, gaussian
+from pyNNsMD.utils.general import parse_single_file, extract_number_of_atoms, get_file_length, gaussian, unit_conversions
 from pyNNsMD.nn_pes_src.device import set_gpu
 import argparse
 #from scipy.spatial.distance import pdist
