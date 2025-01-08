@@ -78,7 +78,7 @@ class WrapModel(keras.Model):
 		self.submodel = model
 		self.mean = mean
 		self.std = tf.sqrt(var)
-	def call(self,inputs):
+	def call(self, inputs):
 		outputs = self.submodel(inputs)
 		outputs_rescaled = self.std * outputs + self.mean
 		return outputs_rescaled
