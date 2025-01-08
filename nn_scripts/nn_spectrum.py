@@ -22,9 +22,9 @@ from pyNNsMD.layers.mlp import MLP
 from pyNNsMD.layers.features import FeatureGeometric
 from pyNNsMD.layers.normalize import ConstLayerNormalization
 
-from esp_nn import precompute_feature_in_chunks, set_const_normalization_from_features
-from esp_nn import OutputSpec, SubNet, build_model, get_limits
-from esp_nn import build_geom_preprocess_layer, ScaledMeanAbsoluteError
+from pyNNsMD.esp_nn import precompute_feature_in_chunks, set_const_normalization_from_features
+from pyNNsMD.esp_nn import OutputSpec, SubNet, build_model, get_limits
+from pyNNsMD.esp_nn import build_geom_preprocess_layer, ScaledMeanAbsoluteError
 from sklearn.metrics import mean_absolute_error, r2_score
 
 import subprocess
