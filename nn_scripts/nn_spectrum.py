@@ -51,7 +51,6 @@ delete_tunertrials = False # delete the hp_outpath after script finished
 logfile = join(outpath, "logfile.txt") # writes all stdout into this file
 
 # training data and scenario
-# natoms = 54
 lines_to_skip = 1 # number of lines to skip in the input file, not containing atom coordinates
 natoms = extract_number_of_atoms(traindata, lines_to_skip)
 print(f"Number of atoms detected in the input file {traindata} is {natoms}")
@@ -440,12 +439,8 @@ hp_model = tuner.hypermodel.build(best_hps)
 # for comparison build the default classical nn-esp model. Some input is needed:
 if create_origmodel:
     # model needs interatomic dists
-    if tgt == "site":
-        geom_idx = [(i,j) for i,j in combinations(range(natoms), 2)]
-        interatomic_dists = np.array(geom_idx) # this is [ [0,1],[0,2],...,[83,84] ]
-    elif tgt == "cpl":
-        interatomic_dists = generate_invd_list("cpl", "inter", natoms)
-        interatomic_dists = np.array(interatomic_dists) #shape (7225,2)
+    geom_idx = [(i,j) for i,j in combinations(range(natoms), 2)]
+    interatomic_dists = np.array(geom_idx) # this is [ [0,1],[0,2],...,[83,84] ]
         
     # model needs subnets
     if esp_in_traindata:

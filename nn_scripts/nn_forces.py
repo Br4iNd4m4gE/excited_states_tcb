@@ -39,7 +39,6 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 inputfile = args.file
 lines_to_skip = 1 # number of lines to skip in the input file, not containing atom coordinates
 n_atoms = extract_number_of_atoms(inputfile, lines_to_skip)
-# data_size = 49117 # 36490 number without ACN # 39804 number from manu
 linestotal = get_file_length(inputfile)
 ntotal = linestotal / (n_atoms + 2)
 if not ntotal.is_integer():

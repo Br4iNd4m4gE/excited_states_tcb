@@ -57,8 +57,10 @@ if [[ "$pythonfile" == *"forces"* ]]; then
     source /home/lpetersen/anaconda_interpreter/etc/profile.d/conda.sh # from lukas, this is for forces
     conda activate kgcnn_new
 elif [[ "$pythonfile" == *"spectrum"* ]]; then
-    source /home/cschmidt/miniconda3/bin/activate excited_states_NN_from_monja # for nn_spectrum, this is for spectrum (based on an environment from monja)
-    conda activate excited_states_NN_from_monja
+    # source /home/cschmidt/miniconda3/bin/activate excited_states_NN_from_monja # for nn_spectrum, this is for spectrum (based on an environment from monja)
+    # conda activate excited_states_NN_from_monja
+    source /home/lpetersen/anaconda_interpreter/etc/profile.d/conda.sh
+    conda activate kgcnn_new
 else
     echo "Error: Unknown python file type"
     exit 1
