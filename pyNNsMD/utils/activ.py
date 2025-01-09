@@ -13,7 +13,7 @@ def leaky_softplus(x, alpha=0.3):
         alpha (float, optional): Leaking slope. The default is 0.3.
 
     Returns:
-        func: A callable function of x.
+        output of function of x.
     """
     def activation(x):
         return ks.activations.softplus(x) * (1 - alpha) + alpha * x
