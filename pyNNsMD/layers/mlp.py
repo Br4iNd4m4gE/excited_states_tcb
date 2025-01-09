@@ -54,16 +54,12 @@ class MLP(ks.layers.Layer):
         if callable(dense_activ):
             self.dense_activ = dense_activ
         else:
-            self.dense_activ = ks.activations.deserialize(dense_activ, custom_objects={'leaky_softplus': leaky_softplus,
-                                                                                   'shifted_softplus': shifted_softplus
-                                                                                   })
+            self.dense_activ = ks.activations.deserialize(dense_activ, custom_objects={'leaky_softplus': leaky_softplus, 'shifted_softplus': shifted_softplus})
         
         if callable(dense_activ_last):
             self.dense_activ_last = dense_activ_last
         else:
-            self.dense_activ_last = ks.activations.deserialize(dense_activ_last,
-                                                           custom_objects={'leaky_softplus': leaky_softplus,
-                                                                           'shifted_softplus': shifted_softplus})
+            self.dense_activ_last = ks.activations.deserialize(dense_activ_last, custom_objects={'leaky_softplus': leaky_softplus, 'shifted_softplus': shifted_softplus})
         
         self.dense_activity_regularizer = ks.regularizers.get(dense_activity_regularizer)
         self.dense_kernel_regularizer = ks.regularizers.get(dense_kernel_regularizer)

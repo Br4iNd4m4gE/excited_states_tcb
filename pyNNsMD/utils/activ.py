@@ -5,7 +5,7 @@ Smooth activation functions for tensorflow.keras.
 import tensorflow.keras as ks
 
 
-def leaky_softplus(alpha=0.3):
+def leaky_softplus(x, alpha=0.3):
     """
     Leaky softplus activation function similar to leakyRELU but smooth.
         
@@ -17,7 +17,7 @@ def leaky_softplus(alpha=0.3):
     """
     def activation(x):
         return ks.activations.softplus(x) * (1 - alpha) + alpha * x
-    return activation
+    return activation(x)
 
 
 def shifted_softplus(x):
