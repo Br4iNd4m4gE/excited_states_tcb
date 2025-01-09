@@ -64,14 +64,6 @@ else
     exit 1
 fi
 
-# source /home/lpetersen/anaconda_interpreter/etc/profile.d/conda.sh # from lukas, this is for forces
-# conda activate kgcnn_new
-# source /home/mkunkel/miniconda3/bin/activate clonednew # from monja for nn_spectrum, this is for spectrum
-# conda activate clonednew
-
-# source /home/user6/miniconda3/bin/activate tfenv # no idea for what this is
-# conda activate tfenv
-
 # Deprecated CUDA setting on server
 # export XLA_FLAGS="--xla_gpu_cuda_data_dir=/usr/lib/cuda"
 # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/run/cuda/lib
@@ -98,9 +90,9 @@ fi
 
 # End time of calculation
 end=$( date "+%s" )
-# Now we calculate the time taken by the calculation
+# Calculate the calculation time
 duration=$(( end - start ))
-# Now we do Wibbly Wobbly Timey Wimey... Stuff
+# Print time
 DAYS=$(( duration / 86400 ))
 HOURS=$(( (duration % 86400) / 3600 ))
 MINS=$(( ((duration % 86400) % 3600) / 60 ))

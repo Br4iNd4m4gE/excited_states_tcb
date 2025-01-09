@@ -3,7 +3,7 @@
 
 python_script="/home/cschmidt/bin/excited_states_networks/nn_scripts/nn_spectrum.py"
 
-queue_script="/home/cschmidt/bin/excited_states_networks/submit_scripts/qpython_forces_spectrum.sh"
+queue_script="$(dirname "$0")/qpython_forces_spectrum.sh"
 
 data_file="$1"
 
