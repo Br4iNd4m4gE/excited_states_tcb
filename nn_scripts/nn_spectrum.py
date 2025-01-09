@@ -103,7 +103,7 @@ plot_learning_curve = True # plot log(mse) vs. epochs
 # other
 clean_up_hpoutpath = True # delet hp_outpath before tuning (catch some errors 'oracle exited training' etc.)
 ########################  End of User section  ################################
-
+from pyNNsMD.utils.activ import leaky_softplus
 def hp_simple_model_site(hp):
     # hp = kt.HyperParameters() must be given if single model shall be constructed
     """ Building up the esp-model for hyperparametersearch. This is a modified 
@@ -127,8 +127,8 @@ def hp_simple_model_site(hp):
     hp_regularizer = regulizer
     mlp = MLP(dense_units=neurons, 
               dense_depth=hp_layer_depth, 
-              dense_activ=dense_activ, 
-              dense_activ_last=dense_activ,
+              dense_activ=leaky_softplus(alpha=0.03),  # Changed to use the leaky_softplus function
+              dense_activ_last=leaky_softplus(alpha=0.03),  # Changed to use the leaky_softplus function
               dense_kernel_regularizer=hp_regularizer,
               name="monolith")
     # 5. Output
