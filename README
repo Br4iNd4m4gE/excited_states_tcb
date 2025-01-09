@@ -2,7 +2,7 @@
 
 ### Create Conda Environment
 Create the environment from the `.yml` file:
-```
+```bash
 conda env create -f excited_states_NN_kgcnn.yml
 ```
 
