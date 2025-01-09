@@ -1,3 +1,13 @@
+## Installation
+
+### Create Conda Environment
+Create the environment from the `.yml` file:
+```
+conda env create -f excited_states_NN_kgcnn.yml
+```
+
+
+## Folder Structure
 pyNNsMD            -> general NN functions
 nn_scripts         -> NN and reruns #####
 submit_scripts     -> submit the NN jobs to the server #####

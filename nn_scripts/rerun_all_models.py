@@ -1,4 +1,4 @@
-#!/home/cschmidt/miniconda3/envs/dftb_workflow/bin/python
+#!/home/cschmidt/miniconda3/envs/excited_states_NN_kgcnn/bin/python
 
 import os
 from os.path import join, isdir
