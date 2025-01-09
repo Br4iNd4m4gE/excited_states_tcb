@@ -1,7 +1,7 @@
 # Submit the python script to the queue and gives it the name of the current folder in the queue
 # Use the -s flag to keep this process running until it finishes and sync training data to wandb
 
-python_script="/home/cschmidt/bin/excited_states_networks/nn_scripts/nn_forces.py"
+python_script="$(dirname "$(dirname "$0")")/nn_scripts/nn_forces.py"
 
 queue_script="$(dirname "$0")/qpython_forces_spectrum.sh"
 

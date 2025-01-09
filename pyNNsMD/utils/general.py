@@ -145,7 +145,7 @@ def get_file_length(file_path):
     line_count = int(result.stdout.split()[0])
     return line_count
 
-def extract_number_of_atoms(file_path):
+def extract_number_of_atoms(file_path, lines_to_skip=0):
     with open(file_path, 'r') as file:
         lines = file.readlines()
     
@@ -157,7 +157,7 @@ def extract_number_of_atoms(file_path):
             break
         num_atoms += 1
     
-    # num_atoms -= 1 # Subtract one because the first line is the energy
+    num_atoms -= lines_to_skip # Subtract one because the first line is the energy
     return num_atoms
 
 def gaussian(x, amplitude, mean, stddev):
