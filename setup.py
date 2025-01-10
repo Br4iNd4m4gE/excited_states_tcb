@@ -60,7 +60,7 @@ setup(
     scripts=[
         'submit_scripts/submit_spectrum_network.sh',
         'submit_scripts/submit_forces_network.sh',
-        'rerun_nn_spectrum.sh',
-        'rerun_nn_forces.sh'
+        'nn_scripts/rerun_nn_spectrum.sh',
+        'nn_scripts/rerun_nn_forces.sh'
     ],
 )
