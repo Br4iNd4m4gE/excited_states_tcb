@@ -77,3 +77,11 @@ excited_states_nn/
 ├── setup.py                            # pip requirements (python only packages)
 ├── meta.yaml                           # conda requirements (python + other packages)
 └── README.md
+
+
+
+## Building information
+
+- Update packages, version and executable scripts in ```meta.yaml``` and ```setup.py```
+- Compile new ```.conda``` file with ```conda build .``` in package root folder
+- ```.conda``` file is found in the /path/to/your/conda/envs/your_env/conda-bld/noarch/
