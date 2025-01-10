@@ -57,4 +57,10 @@ setup(
         'termcolor==2.3.0',
         'wrapt==1.14.1'
     ],
+    scripts=[
+        'submit_scripts/submit_spectrum_network.sh',
+        'submit_scripts/submit_forces_network.sh',
+        'rerun_nn_spectrum.sh',
+        'rerun_nn_forces.sh'
+    ],
 )

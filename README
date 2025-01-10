@@ -41,9 +41,10 @@ code submit_scripts/qpython_forces_spectrum.sh
 
 code nn_scripts/rerun_*.sh
 # replace -> #!/path/to/your/conda/folder/envs/excited_states_NN_kgcnn/bin/python
+```
 
 
-## Alternatives and Problem Solving:
+### **Alternatives and Problem Solving**:
 
 1. **Create Conda Environment from '.yml' file**:
 Create the environment from the `.yml` file:
@@ -58,9 +59,21 @@ conda install --use-local excited_states_nn-version-py_0.conda
 
 
 ## Folder Structure
-pyNNsMD            -> general NN functions
-nn_scripts         -> NN and reruns #####
-submit_scripts     -> submit the NN jobs to the server #####
-evaluation_scripts -> evaluate results
 
-##### -> add this to your PATH
+excited_states_nn/
+├── nn_scripts/                         # NN and reruns
+│   ├── nn_spectrum.py          
+│   ├── nn_forces.py
+│   └── rerun_script.sh   
+│   
+├── submit_scripts/                     # submit scripts to submit to server
+│   ├── submit_spectrum_network.sh
+│   ├── submit_forces_network.sh
+│
+├── evaluation_scripts/                 # evaluate training data and NN results
+├── pyNNsMD/                            # NN components
+│
+├── build/                              # build folder (for installing the package)
+├── setup.py                            # pip requirements (python only packages)
+├── meta.yaml                           # conda requirements (python + other packages)
+└── README.md
