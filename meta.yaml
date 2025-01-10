@@ -1,6 +1,6 @@
 package:
   name: excited_states_nn
-  version: "1.0.0stable"
+  version: "1.0.0"
 
 source:
   path: .

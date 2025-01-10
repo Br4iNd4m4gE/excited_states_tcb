@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='excited_states_nn',
-    version='1.0.0stable',
+    version='1.0.0',
     packages=find_packages(),
     install_requires=[
         'absl-py==2.0.0',
