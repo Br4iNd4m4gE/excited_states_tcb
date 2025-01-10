@@ -1,9 +1,59 @@
+# Excited States Neural Network
+
+Neural Network for predicting emission energies (+ oscillator strengths) and forces (+ states energies) of excited states.
+
 ## Installation
 
-### Create Conda Environment
+### Prerequisites
+
+- [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/products/distribution) installed on your system.
+
+### Steps to Install the Package
+
+1. **Clone the Repository**:
+```sh
+git clone https://github.com/yourusername/excited_states_nn.git
+cd excited_states_nn
+```
+
+2. **Create Conda Environment**:
+```sh
+conda env create --name excited_states_NN_kgcnn
+conda activate excited_states_NN_kgcnn
+```
+
+3. **Navigate to the build Directory Containing the .conda File and install the Package**:
+```sh
+cd excited_states_nn
+cd build
+conda install --use-local excited_states_nn-version-py_0.conda
+```
+
+4. **Delete the .git Folder**:
+```sh
+rm -r excited_states_nn
+```
+
+5. **Adjust conda env references**:
+```sh
+code submit_scripts/qpython_forces_spectrum.sh
+# replace -> source /path/to/your/conda/folder/bin/activate excited_states_NN_kgcnn
+
+code nn_scripts/rerun_*.sh
+# replace -> #!/path/to/your/conda/folder/envs/excited_states_NN_kgcnn/bin/python
+
+
+## Alternatives and Problem Solving:
+
+1. **Create Conda Environment from '.yml' file**:
 Create the environment from the `.yml` file:
 ```bash
 conda env create -f excited_states_NN_kgcnn.yml
+```
+
+2. **Install the Package**:
+```bash
+conda install --use-local excited_states_nn-version-py_0.conda
 ```
 
 
