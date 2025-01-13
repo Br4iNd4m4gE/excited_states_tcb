@@ -66,9 +66,9 @@ excited_states_nn/
 │   ├── nn_forces.py
 │   └── rerun_script.sh   
 │   
-├── submit_scripts/                     # submit scripts to submit to server
+├── submit_scripts/                     # submit scripts to server
 │   ├── submit_spectrum_network.sh
-│   ├── submit_forces_network.sh
+│   └── submit_forces_network.sh
 │
 ├── evaluation_scripts/                 # evaluate training data and NN results
 ├── pyNNsMD/                            # NN components
