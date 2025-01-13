@@ -26,7 +26,7 @@ conda activate excited_states_NN_kgcnn
 ```sh
 cd excited_states_nn
 cd build
-conda install --use-local excited_states_nn-version-py_0.conda
+conda install --use-local excited_states_nn-version.conda
 ```
 
 4. **Delete the .git Folder**:

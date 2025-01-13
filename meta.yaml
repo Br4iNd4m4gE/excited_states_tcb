@@ -236,6 +236,10 @@ requirements:
     - zlib=1.2.13=hd590300_5
     - zstd=1.5.5=hfc55251_0
 
+test:
+  imports:
+    - excited_states_nn
+
 about:
   home: https://github.com/Br4iNd4m4gE/excited_states_tcb  # URL to your project's homepage
   # license: MIT  # Replace with your package's license
