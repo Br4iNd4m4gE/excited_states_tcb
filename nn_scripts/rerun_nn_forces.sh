@@ -7,7 +7,7 @@ from os.path import join, isdir, isfile, dirname, abspath
 import os
 # sys.path.append("/home/cschmidt/bin/excited_states_networks") # pyNNsMD
 sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import parse_single_file, extract_number_of_atoms, get_file_length, gaussian, unit_conversions
+from pyNNsMD.utils.general import parse_single_file, extract_number_of_atoms, get_file_length, gaussian, unit_conversions, load_data_excited_states_forces
 from pyNNsMD.nn_pes_src.device import set_gpu
 import argparse
 #from scipy.spatial.distance import pdist
@@ -18,46 +18,49 @@ import numpy as np
 from sklearn.metrics import r2_score, mean_absolute_error
 from scipy.optimize import curve_fit
 import subprocess
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import KFold
+import tensorflow.keras.backend as K
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-g", "--gpuid", type=int)
+ap.add_argument("-g", "--gpuid", type=int, required=True, help="GPU ID to use")
 # ap.add_argument("-p", "--outname") # wird ggf. ignoriert
 ap.add_argument("-f", "--file", required=True, help="Path to the input file")
-ap.add_argument("-m", "--model", required=False, help="Path to the model", default=None)
-ap.add_argument("-s", "--save", action="store_true", help="Save energy and oscillator strength in separate files", default=True)
+ap.add_argument("-m", "--model", required=True, help="Path to the saved model")
+# ap.add_argument("-s", "--save", action="store_true", help="Save energy and oscillator strength in separate files", default=True)
 args = ap.parse_args()
+
+# Set GPU
 set_gpu([args.gpuid])          ###############  wichtig !!
 
-###################### Define Functions ######################
+###############################################################
 
-import numpy as np
-from sklearn.model_selection import KFold
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import r2_score, mean_absolute_error
+# Load unit conversions
+A2Bohr, EhtoeV, ehtonm = unit_conversions["A2Bohr"], unit_conversions["EhtoeV"], unit_conversions["ehtonm"]
 
-# Number of folds for cross-validation
-n_folds = 3
+# Load data
+inputfile = args.file
+lines_to_skip = 1 # comment lines
+x, y = load_data_excited_states_forces(inputfile, lines_to_skip)
 
-# Initialize KFold
-kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
+# Convert to tensors
+x = tf.convert_to_tensor(x)
+y = tf.convert_to_tensor(y)
 
-# Arrays to store results
+# Load model
+model_path = args.model
+best_model = tf.keras.models.load_model(model_path)
+
+# Cross-validation
+kf = KFold(n_splits=5, random_state=42, shuffle=True)
 r2_scores_energy = []
 mae_scores_energy = []
 r2_scores_forces = []
 mae_scores_forces = []
 
-# Perform cross-validation
 for train_index, test_index in kf.split(x):
-    # Split the data
-    x_train, x_test = np.array(x)[train_index], np.array(x)[test_index]
-    y_train, y_test = np.array(y)[train_index], np.array(y)[test_index]
-
-    # Convert to tensors
-    x_train = tf.convert_to_tensor(x_train)
-    y_train = tf.convert_to_tensor(y_train)
-    x_test = tf.convert_to_tensor(x_test)
-    y_test = tf.convert_to_tensor(y_test)
+    x_train, x_test = x[train_index], x[test_index]
+    y_train, y_test = y[train_index], y[test_index]
 
     # Scale the output data
     scaler = StandardScaler(with_std=False)
@@ -65,15 +68,7 @@ for train_index, test_index in kf.split(x):
     y_train_scaled = scaler.transform(y_train)
     y_test_scaled = scaler.transform(y_test)
 
-    # Hyperparameter tuning
-    tuner.search(x_train, y_train_scaled, batch_size=batch_size, epochs=hp_epochs, callbacks=[stop_early], verbose=2, validation_split=0.2)
-    best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-    best_model = tuner.hypermodel.build(best_hps)
-
-    # Train the best model
-    best_model.fit(x_train, y_train_scaled, batch_size=batch_size, epochs=fit_epochs, verbose=2, validation_split=0.2)
-
-    # Evaluate the best model
+    # Evaluate the model
     test_pred_scaled = best_model.predict(x_test)
     test_pred_rescaled = scaler.inverse_transform(test_pred_scaled)
 
@@ -85,7 +80,6 @@ for train_index, test_index in kf.split(x):
     r2_forces = r2_score(forces_test, forces_pred)
     mae_forces = mean_absolute_error(forces_test, forces_pred)
 
-    # Store results
     r2_scores_energy.append(r2_energy)
     mae_scores_energy.append(mae_energy)
     r2_scores_forces.append(r2_forces)

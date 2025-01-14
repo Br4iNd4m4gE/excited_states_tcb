@@ -170,3 +170,34 @@ unit_conversions = {
     'HaB_to_eVA': 27.2114 / 0.52918,
 }
 
+def load_data_excited_states_forces(inputfile, lines_to_skip):
+
+    AtoBohr = unit_conversions['A2Bohr']
+
+    n_atoms = extract_number_of_atoms(inputfile, lines_to_skip)
+    linestotal = get_file_length(inputfile)
+    ntotal = linestotal / (n_atoms + lines_to_skip + 1) # + 1 because of the empty line at the end of each geometry
+    if not ntotal.is_integer():
+        raise ValueError("Number of Lines incorrect.")
+    data_size = int(ntotal)
+
+    with open(inputfile, "r") as data:
+        x = []
+        y = []
+        for i in range(data_size):
+            energy = data.readline()
+            tmpy = []
+            tmpy.append(np.sum([float(energy) for energy in energy.split()]))
+            comp_tmp = []
+            for j in range(n_atoms):
+                line = data.readline()
+                line_split = [float(n) for n in line.split()[1:]]
+                coords = [AtoBohr * n for n in line_split[:3]]
+                coords.append(line_split[3])
+                comp_tmp.append(coords)
+                tmpy.extend(line_split[4:])
+            x.append(comp_tmp)
+            y.append(tmpy)
+            data.readline()
+    
+    return np.array(x), np.array(y) # maybe dont use np.array
