@@ -19,7 +19,6 @@ from sklearn.metrics import r2_score, mean_absolute_error
 from scipy.optimize import curve_fit
 import subprocess
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import KFold
 import tensorflow.keras.backend as K
 
 ap = argparse.ArgumentParser()
@@ -51,43 +50,28 @@ y = tf.convert_to_tensor(y)
 model_path = args.model
 best_model = tf.keras.models.load_model(model_path)
 
-# Cross-validation
-kf = KFold(n_splits=5, random_state=42, shuffle=True)
-r2_scores_energy = []
-mae_scores_energy = []
-r2_scores_forces = []
-mae_scores_forces = []
+# Load scaler
+scaler_path = args.scaler # replace with scaler path
+scaler = joblib.load(scaler_path)
 
-for train_index, test_index in kf.split(x):
-    x_train, x_test = x[train_index], x[test_index]
-    y_train, y_test = y[train_index], y[test_index]
+# Scale the output data using the loaded scaler
+y_scaled = scaler.transform(y)
 
-    # Scale the output data
-    scaler = StandardScaler(with_std=False)
-    scaler.fit(y_train)
-    y_train_scaled = scaler.transform(y_train)
-    y_test_scaled = scaler.transform(y_test)
+# Evaluate the model
+pred_scaled = best_model.predict(x)
+pred_rescaled = scaler.inverse_transform(pred_scaled)
 
-    # Evaluate the model
-    test_pred_scaled = best_model.predict(x_test)
-    test_pred_rescaled = scaler.inverse_transform(test_pred_scaled)
+# Calculate performance metrics
+forces_pred = K.flatten(pred_rescaled[:, 1:])
+forces_true = K.flatten(y[:, 1:])
+r2_energy = r2_score(y[:, 0], pred_rescaled[:, 0])
+mae_energy = mean_absolute_error(y[:, 0], pred_rescaled[:, 0])
+r2_forces = r2_score(forces_true, forces_pred)
+mae_forces = mean_absolute_error(forces_true, forces_pred)
 
-    # Calculate performance metrics
-    forces_pred = K.flatten(test_pred_rescaled[:, 1:])
-    forces_test = K.flatten(y_test[:, 1:])
-    r2_energy = r2_score(y_test[:, 0], test_pred_rescaled[:, 0])
-    mae_energy = mean_absolute_error(y_test[:, 0], test_pred_rescaled[:, 0])
-    r2_forces = r2_score(forces_test, forces_pred)
-    mae_forces = mean_absolute_error(forces_test, forces_pred)
-
-    r2_scores_energy.append(r2_energy)
-    mae_scores_energy.append(mae_energy)
-    r2_scores_forces.append(r2_forces)
-    mae_scores_forces.append(mae_forces)
-
-# Print cross-validation results
-print("Cross-Validation Results:")
-print("R2 Total Energy:", np.mean(r2_scores_energy), "+/-", np.std(r2_scores_energy))
-print("MAE Total Energy:", np.mean(mae_scores_energy), "+/-", np.std(mae_scores_energy), "eV")
-print("R2 Forces:", np.mean(r2_scores_forces), "+/-", np.std(r2_scores_forces))
-print("MAE Forces:", np.mean(mae_scores_forces), "+/-", np.std(mae_scores_forces), "eV/A")
+# Print performance metrics
+print("Performance on new data:")
+print("R2 Total Energy:", r2_energy)
+print("MAE Total Energy:", mae_energy, "eV")
+print("R2 Forces:", r2_forces)
+print("MAE Forces:", mae_forces, "eV/A")
