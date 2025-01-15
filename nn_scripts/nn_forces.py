@@ -83,34 +83,34 @@ class CustomModel(keras.Model):
 		with tf.GradientTape() as tape:
 			tape.watch(inputs)
 			outputs = super().call(inputs)
-			output = outputs[:,:1]
+			output = outputs[:, :1]
 			grads = tape.gradient(output,inputs)
-			pred_forces = -grads[:,:,:3]
-			pred_forces = tf.reshape(pred_forces,[-1,n_atoms*3])
-			allpred = tf.concat([output,pred_forces],1)
+			pred_forces = -grads[:, :, :3]
+			pred_forces = tf.reshape(pred_forces, [-1, n_atoms * 3])
+			allpred = tf.concat([output,pred_forces], 1)
 		return allpred
 	def train_step(self,data):
 		x, y = data
 		with tf.GradientTape(persistent=False) as tape:
 			tape.watch(x)
-			forces = y[:,1:]
-			forces = tf.reshape(forces,[-1,n_atoms*3])
+			forces = y[:, 1:]
+			forces = tf.reshape(forces,[-1, n_atoms * 3])
 			allpred = self(x, training=True)
-			loss = self.compiled_loss(y,allpred,regularization_losses=self.losses)
+			loss = self.compiled_loss(y,allpred, regularization_losses=self.losses)
 		train_vars = self.trainable_variables
 		weight_grads = tape.gradient(loss, train_vars)
 		self.optimizer.apply_gradients(zip(weight_grads, train_vars))
-		self.compiled_metrics.update_state(forces, allpred[:,1:])	#metric MAE only compares forces not the energy
+		self.compiled_metrics.update_state(forces, allpred[:, 1:])	#metric MAE only compares forces not the energy
 		return {m.name: m.result() for m in self.metrics}
 	def test_step(self,data):
 		x, y = data
 		with tf.GradientTape(persistent=False) as tape:
 			tape.watch(x)
-			forces = y[:,1:]
-			forces = tf.reshape(forces,[-1,n_atoms*3])
+			forces = y[:, 1:]
+			forces = tf.reshape(forces,[-1, n_atoms * 3])
 			allpred = self(x, training=False)
 			self.compiled_loss(y,allpred,regularization_losses=self.losses)
-		self.compiled_metrics.update_state(forces, allpred[:,1:])	#metric MAE only compares forces not the energy
+		self.compiled_metrics.update_state(forces, allpred[:, 1:])	#metric MAE only compares forces not the energy
 		return {m.name: m.result() for m in self.metrics}
 
 #Gradients(Eh/Bohr) have to be calculated from true coordinates -> Input(x[Bohr],ESP[Eh]), layer calculates inverse distances, layer normalizes, dense trainable layers, output(Eh)
@@ -267,6 +267,8 @@ hist = best_model.fit(x_train, y_train_scaled, batch_size=batch_size, epochs=fit
 losses = hist.history["loss"]
 val_losses = hist.history["val_loss"]
 eval = best_model.evaluate(x_test, y_test_scaled)
+print("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+print(best_model(x_test).shape, x_test.shape, y_test_scaled.shape)
 
 #Save models
 best_model.save("best_model")

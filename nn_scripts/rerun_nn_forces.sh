@@ -41,7 +41,7 @@ A2Bohr, EhtoeV, ehtonm = unit_conversions["A2Bohr"], unit_conversions["EhtoeV"],
 
 # Load model
 model_path = args.model
-with tf.keras.utils.custom_object_scope({'my_loss_fn': custom_loss_forces(0.01)}):  # Adjust the loss_ratio as needed
+with tf.keras.utils.custom_object_scope({'my_loss_fn': custom_loss_forces(0.005)}):  # Adjust the loss_ratio as needed
     best_model = tf.keras.models.load_model(model_path)
 
 # Load data
@@ -49,8 +49,8 @@ inputfile = args.file
 lines_to_skip = 1 # comment lines
 x, y = load_data_excited_states_forces(inputfile, lines_to_skip)
 
-# print("Shape of x:", x.shape)
-# print("Shape of y:", y.shape)
+print("Shape of x:", np.array(x).shape)
+print("Shape of y:", np.array(y).shape)
 
 # Convert to tensors
 x = tf.convert_to_tensor(x)
@@ -64,8 +64,20 @@ scaler = joblib.load(scaler_path)
 # Scale the output data using the loaded scaler
 y_scaled = scaler.transform(y)
 
+print("Shape of y_scaled:", np.array(y_scaled).shape)
+
 # Evaluate the model
 pred_scaled = best_model.predict(x)
+print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+print(pred_scaled.shape)
+print(pred_scaled[0])
+print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
+# Ensure the predictions have the same shape as the original data
+if pred_scaled.shape[1] != y.shape[1]:
+    raise ValueError(f"Shape mismatch: predictions have shape {pred_scaled.shape} but expected shape {y.shape}")
+
+# Inverse transform the predictions
 pred_rescaled = scaler.inverse_transform(pred_scaled)
 
 # Calculate performance metrics
