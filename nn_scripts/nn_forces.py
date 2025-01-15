@@ -18,7 +18,7 @@ import tensorflow.keras.backend as K
 import argparse
 from os.path import join, isdir, isfile, dirname, abspath
 sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, generate_invd_list, get_file_length, extract_number_of_atoms, unit_conversions
+from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, generate_invd_list, get_file_length, extract_number_of_atoms, unit_conversions, load_data_excited_states_forces
 from pyNNsMD.utils.loss import custom_loss_forces
 from pyNNsMD.nn_pes_src.device import set_gpu
 
@@ -37,15 +37,9 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 ############################
 
 #Inputs
-# inputfile = "train_acn_forces.dat"
 inputfile = args.file
 lines_to_skip = 1 # number of lines to skip in the input file, not containing atom coordinates
 n_atoms = extract_number_of_atoms(inputfile, lines_to_skip)
-linestotal = get_file_length(inputfile)
-ntotal = linestotal / (n_atoms + 2)
-if not ntotal.is_integer():
-    raise ValueError("Number of Lines incorrect.")
-data_size = int(ntotal)
 
 fit_epochs = 2000
 batch_size = 128
@@ -195,24 +189,6 @@ stop_early = tf.keras.callbacks.EarlyStopping(
     restore_best_weights = True
 )
 
-# def def_loss_function(loss_ratio):
-# 	def my_loss_fn(y_true, y_pred):
-# 		squared_difference_energies = tf.square(y_true[:,0] - y_pred[:,0])
-# 		# abs_difference_forces = tf.math.abs(y_true[:,1:] - y_pred[:,1:])
-# 		square_difference_forces = tf.square(y_true[:,1:] - y_pred[:,1:])
-# 		quartic_difference_forces = (1e2 * tf.square(y_true[:,1:] - y_pred[:,1:])) ** 2
-
-# 		# different loss functions
-# 		# loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(abs_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
-# 		loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(square_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
-# 		# loss = tf.reduce_mean(square_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
-# 		# loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(square_difference_forces, axis=-1)
-# 		# loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
-# 		# loss = tf.reduce_mean(square_difference_forces, axis=-1)
-# 		# loss = tf.reduce_mean(quartic_difference_forces, axis=-1)
-# 		return loss
-# 	return my_loss_fn
-
 #build model
 def build_model(hp):
 	# Define the model
@@ -241,26 +217,7 @@ def build_model(hp):
 
 ###########################  Start of Script  ##################################
 
-#reads input data (already scales Angstrom to Bohr)
-with open(inputfile, "r") as data:
-	x = []
-	y = []
-	for i in range(data_size):
-		energy = data.readline()
-		tmpy = []
-		# tmpy.append(float(energy.split()[0]) + float(energy.split()[1]))	#labels are split in electronic and repulsive energies
-		tmpy.append(np.sum([float(energy) for energy in energy.split()])) # reads in all energies within the first line and adds them up
-		comp_tmp = []
-		for j in range(n_atoms):
-			line = data.readline()
-			line_split = [float(n) for n in line.split()[1:]]
-			coords = [AtoBohr * n for n in line_split[:3]]
-			coords.append(line_split[3])
-			comp_tmp.append(coords)
-			tmpy.extend(line_split[4:])
-		x.append(comp_tmp)
-		y.append(tmpy)
-		data.readline()
+x, y = load_data_excited_states_forces(inputfile, lines_to_skip)
 
 #generate train and test sets
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)

@@ -49,6 +49,9 @@ inputfile = args.file
 lines_to_skip = 1 # comment lines
 x, y = load_data_excited_states_forces(inputfile, lines_to_skip)
 
+# print("Shape of x:", x.shape)
+# print("Shape of y:", y.shape)
+
 # Convert to tensors
 x = tf.convert_to_tensor(x)
 y = tf.convert_to_tensor(y)
