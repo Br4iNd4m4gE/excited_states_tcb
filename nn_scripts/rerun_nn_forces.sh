@@ -29,6 +29,7 @@ ap.add_argument("-g", "--gpuid", type=int)
 ap.add_argument("-f", "--file", required=True, help="Path to the input file")
 ap.add_argument("-m", "--model", required=True, help="Path to the saved model")
 ap.add_argument("-s", "--save", action="store_true", help="Save energy and oscillator strength in separate files", default=True)
+ap.add_argument("-o", "--output", required=True, help="Output file for the predictions")
 args = ap.parse_args()
 
 # Set GPU
@@ -56,35 +57,36 @@ print("Shape of y:", np.array(y).shape)
 x = tf.convert_to_tensor(x)
 y = tf.convert_to_tensor(y)
 
-# Load scaler
-scaler_folder = dirname(dirname(model_path))
-scaler_path = join(scaler_folder, 'scaler.pkl')
-scaler = joblib.load(scaler_path)
+# # Load scaler
+# scaler_folder = dirname(dirname(model_path))
+# scaler_path = join(scaler_folder, 'scaler.pkl')
+# scaler = joblib.load(scaler_path)
 
-# Scale the output data using the loaded scaler
-y_scaled = scaler.transform(y)
+# # Scale the output data using the loaded scaler
+# y = scaler.transform(y)
 
-print("Shape of y_scaled:", np.array(y_scaled).shape)
+print("Shape of y:", np.array(y).shape)
 
 # Evaluate the model
-pred_scaled = best_model.predict(x)
+# prediction = best_model.predict(x)
+prediction = best_model(x)
 print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-print(pred_scaled.shape)
-print(pred_scaled[0])
+print(prediction.shape)
+# print(prediction[0])
 print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
 # Ensure the predictions have the same shape as the original data
-if pred_scaled.shape[1] != y.shape[1]:
-    raise ValueError(f"Shape mismatch: predictions have shape {pred_scaled.shape} but expected shape {y.shape}")
+if prediction.shape[1] != y.shape[1]:
+    raise ValueError(f"Shape mismatch: predictions have shape {prediction.shape} but expected shape {y.shape}")
 
-# Inverse transform the predictions
-pred_rescaled = scaler.inverse_transform(pred_scaled)
+# # Inverse transform the predictions
+# prediction = scaler.inverse_transform(prediction)
 
 # Calculate performance metrics
-forces_pred = K.flatten(pred_rescaled[:, 1:])
+forces_pred = K.flatten(prediction[:, 1:])
 forces_true = K.flatten(y[:, 1:])
-r2_energy = r2_score(y[:, 0], pred_rescaled[:, 0])
-mae_energy = mean_absolute_error(y[:, 0], pred_rescaled[:, 0])
+r2_energy = r2_score(y[:, 0], prediction[:, 0])
+mae_energy = mean_absolute_error(y[:, 0], prediction[:, 0])
 r2_forces = r2_score(forces_true, forces_pred)
 mae_forces = mean_absolute_error(forces_true, forces_pred)
 
@@ -94,3 +96,14 @@ print("R2 Total Energy:", r2_energy)
 print("MAE Total Energy:", mae_energy, "eV")
 print("R2 Forces:", r2_forces)
 print("MAE Forces:", mae_forces, "eV/A")
+
+if args.save:
+    # Save the predictions
+    output_file = args.output
+    with open(output_file, "w") as f:
+        f.write("Total Energy [eV]  Forces [eV/A]\n")
+        for i, pred in enumerate(prediction):
+            pred_str = " ".join(map(str, pred.numpy().flatten()))
+            f.write(f"{pred_str}\n")
+
+    print(f"Predictions saved to {output_file}")

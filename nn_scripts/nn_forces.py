@@ -64,7 +64,7 @@ hp = kt.HyperParameters()
 
 ###########################  Start of Sript  ##################################
 
-#Classes and Definitions
+# Classes and Definitions
 
 class WrapModel(keras.Model):
 	#important to save model for MLMM
@@ -76,6 +76,7 @@ class WrapModel(keras.Model):
 	def call(self, inputs):
 		outputs = self.submodel(inputs)
 		outputs_rescaled = self.std * outputs + self.mean
+		tf.print("wrap", outputs.shape)
 		return outputs_rescaled
 
 class CustomModel(keras.Model):
@@ -87,9 +88,10 @@ class CustomModel(keras.Model):
 			grads = tape.gradient(output,inputs)
 			pred_forces = -grads[:, :, :3]
 			pred_forces = tf.reshape(pred_forces, [-1, n_atoms * 3])
-			allpred = tf.concat([output,pred_forces], 1)
+			allpred = tf.concat([output, pred_forces], 1)
+			tf.print("custom", allpred.shape)
 		return allpred
-	def train_step(self,data):
+	def train_step(self, data):
 		x, y = data
 		with tf.GradientTape(persistent=False) as tape:
 			tape.watch(x)
@@ -102,7 +104,7 @@ class CustomModel(keras.Model):
 		self.optimizer.apply_gradients(zip(weight_grads, train_vars))
 		self.compiled_metrics.update_state(forces, allpred[:, 1:])	#metric MAE only compares forces not the energy
 		return {m.name: m.result() for m in self.metrics}
-	def test_step(self,data):
+	def test_step(self, data):
 		x, y = data
 		with tf.GradientTape(persistent=False) as tape:
 			tape.watch(x)
@@ -266,7 +268,7 @@ best_model = tuner.hypermodel.build(best_hps)
 hist = best_model.fit(x_train, y_train_scaled, batch_size=batch_size, epochs=fit_epochs, verbose=2, validation_split=0.2)
 losses = hist.history["loss"]
 val_losses = hist.history["val_loss"]
-eval = best_model.evaluate(x_test, y_test_scaled)
+# eval = best_model.evaluate(x_test, y_test_scaled)
 print("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 print(best_model(x_test).shape, x_test.shape, y_test_scaled.shape)
 
