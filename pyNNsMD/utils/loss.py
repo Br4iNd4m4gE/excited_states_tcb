@@ -105,7 +105,7 @@ def merge_hist(hist1, hist2):
     return outhist
 
 
-def def_loss_function(loss_ratio):
+def custom_loss_forces(loss_ratio):
     """
     Custom loss function for forces NN.
 

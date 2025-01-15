@@ -9,6 +9,7 @@ import os
 sys.path.append(abspath(join(dirname(__file__), "..")))
 from pyNNsMD.utils.general import parse_single_file, extract_number_of_atoms, get_file_length, gaussian, unit_conversions, load_data_excited_states_forces
 from pyNNsMD.nn_pes_src.device import set_gpu
+from pyNNsMD.utils.loss import custom_loss_forces
 import argparse
 #from scipy.spatial.distance import pdist
 import matplotlib as mpl
@@ -46,16 +47,16 @@ x, y = load_data_excited_states_forces(inputfile, lines_to_skip)
 x = tf.convert_to_tensor(x)
 y = tf.convert_to_tensor(y)
 
-# Load model
-model_path = args.model
-best_model = tf.keras.models.load_model(model_path)
-
 # Load scaler
 scaler_path = args.scaler # replace with scaler path
 scaler = joblib.load(scaler_path)
 
 # Scale the output data using the loaded scaler
 y_scaled = scaler.transform(y)
+
+# Load model
+model_path = args.model
+best_model = tf.keras.models.load_model(model_path)
 
 # Evaluate the model
 pred_scaled = best_model.predict(x)

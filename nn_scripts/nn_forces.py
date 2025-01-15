@@ -19,6 +19,7 @@ import argparse
 from os.path import join, isdir, isfile, dirname, abspath
 sys.path.append(abspath(join(dirname(__file__), "..")))
 from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, generate_invd_list, get_file_length, extract_number_of_atoms, unit_conversions
+from pyNNsMD.utils.loss import custom_loss_forces
 from pyNNsMD.nn_pes_src.device import set_gpu
 
 import subprocess
@@ -193,23 +194,23 @@ stop_early = tf.keras.callbacks.EarlyStopping(
     restore_best_weights = True
 )
 
-def def_loss_function(loss_ratio):
-	def my_loss_fn(y_true, y_pred):
-		squared_difference_energies = tf.square(y_true[:,0] - y_pred[:,0])
-		# abs_difference_forces = tf.math.abs(y_true[:,1:] - y_pred[:,1:])
-		square_difference_forces = tf.square(y_true[:,1:] - y_pred[:,1:])
-		quartic_difference_forces = (1e2 * tf.square(y_true[:,1:] - y_pred[:,1:])) ** 2
+# def def_loss_function(loss_ratio):
+# 	def my_loss_fn(y_true, y_pred):
+# 		squared_difference_energies = tf.square(y_true[:,0] - y_pred[:,0])
+# 		# abs_difference_forces = tf.math.abs(y_true[:,1:] - y_pred[:,1:])
+# 		square_difference_forces = tf.square(y_true[:,1:] - y_pred[:,1:])
+# 		quartic_difference_forces = (1e2 * tf.square(y_true[:,1:] - y_pred[:,1:])) ** 2
 
-		# different loss functions
-		# loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(abs_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
-		loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(square_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
-		# loss = tf.reduce_mean(square_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
-		# loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(square_difference_forces, axis=-1)
-		# loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
-		# loss = tf.reduce_mean(square_difference_forces, axis=-1)
-		# loss = tf.reduce_mean(quartic_difference_forces, axis=-1)
-		return loss
-	return my_loss_fn
+# 		# different loss functions
+# 		# loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(abs_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
+# 		loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(square_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
+# 		# loss = tf.reduce_mean(square_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
+# 		# loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(square_difference_forces, axis=-1)
+# 		# loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
+# 		# loss = tf.reduce_mean(square_difference_forces, axis=-1)
+# 		# loss = tf.reduce_mean(quartic_difference_forces, axis=-1)
+# 		return loss
+# 	return my_loss_fn
 
 #build model
 def build_model(hp):
@@ -233,7 +234,7 @@ def build_model(hp):
 	model       = CustomModel(inputs=inputs, outputs=outputs)
 	lr_schedule = keras.optimizers.schedules.CosineDecayRestarts(initial_lr, 1e4, t_mul=1.5, m_mul=0.3, alpha=2e-3)
 	opt         = keras.optimizers.Adam(lr_schedule) #initialize optimizer
-	my_loss_fn  = def_loss_function(loss_ratio)
+	my_loss_fn  = custom_loss_forces(loss_ratio)
 	model.compile(optimizer=opt, loss=my_loss_fn, metrics=["mae"])
 	return model
 
