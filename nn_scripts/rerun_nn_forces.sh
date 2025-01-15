@@ -22,11 +22,11 @@ from sklearn.preprocessing import StandardScaler
 import tensorflow.keras.backend as K
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-g", "--gpuid", type=int, required=True, help="GPU ID to use")
-# ap.add_argument("-p", "--outname") # wird ggf. ignoriert
+# ap.add_argument("-g", "--gpuid", type=int, required=True, help="GPU ID to use")
+ap.add_argument("-g", "--gpuid", type=int)
 ap.add_argument("-f", "--file", required=True, help="Path to the input file")
 ap.add_argument("-m", "--model", required=True, help="Path to the saved model")
-# ap.add_argument("-s", "--save", action="store_true", help="Save energy and oscillator strength in separate files", default=True)
+ap.add_argument("-s", "--save", action="store_true", help="Save energy and oscillator strength in separate files", default=True)
 args = ap.parse_args()
 
 # Set GPU

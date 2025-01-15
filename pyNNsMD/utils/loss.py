@@ -105,6 +105,25 @@ def merge_hist(hist1, hist2):
     return outhist
 
 
+def def_loss_function(loss_ratio):
+    """
+    Custom loss function for forces NN.
+
+    Args:
+        loss_ratio (float): Ratio of energy loss to force loss.
+
+    Returns:
+        function: Custom loss function.
+    """
+    def my_loss_fn(y_true, y_pred):
+        squared_difference_energies = tf.square(y_true[:,0] - y_pred[:,0])
+        square_difference_forces = tf.square(y_true[:,1:] - y_pred[:,1:])
+        quartic_difference_forces = (1e2 * tf.square(y_true[:,1:] - y_pred[:,1:])) ** 2
+
+        loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(square_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
+        return loss
+    return my_loss_fn
+
 
 class NACphaselessLoss(ks.losses.Loss):
     def __init__(self, name='phaseless_loss', number_state=2, shape_nac=(1, 1), **kwargs):
