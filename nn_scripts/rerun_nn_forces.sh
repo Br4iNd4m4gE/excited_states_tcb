@@ -21,6 +21,7 @@ from scipy.optimize import curve_fit
 import subprocess
 from sklearn.preprocessing import StandardScaler
 import tensorflow.keras.backend as K
+import joblib
 
 ap = argparse.ArgumentParser()
 # ap.add_argument("-g", "--gpuid", type=int, required=True, help="GPU ID to use")
@@ -38,6 +39,11 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 # Load unit conversions
 A2Bohr, EhtoeV, ehtonm = unit_conversions["A2Bohr"], unit_conversions["EhtoeV"], unit_conversions["ehtonm"]
 
+# Load model
+model_path = args.model
+with tf.keras.utils.custom_object_scope({'my_loss_fn': custom_loss_forces(0.01)}):  # Adjust the loss_ratio as needed
+    best_model = tf.keras.models.load_model(model_path)
+
 # Load data
 inputfile = args.file
 lines_to_skip = 1 # comment lines
@@ -48,15 +54,12 @@ x = tf.convert_to_tensor(x)
 y = tf.convert_to_tensor(y)
 
 # Load scaler
-scaler_path = args.scaler # replace with scaler path
+scaler_folder = dirname(dirname(model_path))
+scaler_path = join(scaler_folder, 'scaler.pkl')
 scaler = joblib.load(scaler_path)
 
 # Scale the output data using the loaded scaler
 y_scaled = scaler.transform(y)
-
-# Load model
-model_path = args.model
-best_model = tf.keras.models.load_model(model_path)
 
 # Evaluate the model
 pred_scaled = best_model.predict(x)

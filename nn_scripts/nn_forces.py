@@ -23,6 +23,7 @@ from pyNNsMD.utils.loss import custom_loss_forces
 from pyNNsMD.nn_pes_src.device import set_gpu
 
 import subprocess
+import joblib
 
 ############################
 
@@ -315,6 +316,9 @@ best_model.save("best_model")
 mlmm_model = WrapModel(best_model, scaler.mean_, 1.0)
 test_pred_rescaled = mlmm_model(x_test)
 mlmm_model.save("mlmm_model")
+
+# Save the scaler
+joblib.dump(scaler, "scaler.pkl")
 
 #Print Performance
 forces_pred = K.flatten(test_pred_rescaled[:, 1:])
