@@ -124,6 +124,7 @@ stop_early = ks.callbacks.EarlyStopping(monitor='val_loss', # which quantity to 
                                         restore_best_weights=True # reset weights to those of best model
                                                                   # after stopping (recommended)
                                         )
+
 lr_reduction = ks.callbacks.ReduceLROnPlateau(
     monitor="val_loss",
     factor=0.3,
@@ -135,38 +136,35 @@ lr_reduction = ks.callbacks.ReduceLROnPlateau(
     min_lr=1e-6)
 
 
-##### 1. Data extraction
-# load data, shuffle and split, save indizes of unused data (=test data)
-xyz_data, energies = parse_single_file(traindata, natoms) # energies and osc. str.
+# Load and preprocess data
+xyz_esp_data, energies = parse_single_file(traindata, natoms) # energies and osc. str.
+print(f"Number of Data points in the input file {traindata} is {len(xyz_esp_data)}")
 
-print(f"Number of Data points in the input file {traindata} is {len(xyz_data)}")
-    
-# Check if data is enough for train and test
-if len(xyz_data) < (ntrain+ntest):
-    print("ERROR: Dataset (%i) is not large enough for the selected ntrain and ntest" %(len(xyz_data)))
-    sys.exit()
-
-#check distribution
-plt.hist(energies[:,1],bins=20)
-plt.savefig(join(outpath, "osc_distribution.png"), dpi=300)
-
-# keep preprocessing 
-coords = xyz_data[:, :, 1:4] # is (nrdata, 85, 3) or (nr, 170,3)
+# Extract coordinates
+coords = xyz_esp_data[:, :, 1:4] # is (nrdata, 85, 3) or (nr, 170,3)
 if coords_to_atomic == True:
     print("Converting coords to atomic units")
     coords *= A2Bohr
 else:
     print("Assuming coords are already in atomic units!")
-
-esp_raw = xyz_data[:, :, 4] # is (nrdata, 85)
-
-x, esp_tmp, ene, unused = shuffle_and_split(xyz_data, energies, ntrain)
     
+# Check if dataset is large enough
+if len(xyz_esp_data) < (ntrain + ntest):
+    print("ERROR: Dataset (%i) is not large enough for the selected ntrain and ntest" %(len(xyz_esp_data)))
+    sys.exit()
+
+# Osc. Str. distribution
+plt.hist(energies[:, 1], bins=20)
+plt.savefig(join(outpath, "osc_distribution.png"), dpi=300)
+
+# Shuffle and split data
+x, esp_tmp, ene, unused = shuffle_and_split(xyz_esp_data, energies, ntrain)
+
+# Extract ESP data
 esp = esp_tmp[:, :, 0]
-# print(x.shape, esp.shape, ene.shape) # x=(nrdata, 85, 3), esp=(nr,85), ene=(nr,)
 
 # store train and test data in dictionary
-data = {"x": x, "esp":esp}
+data = {"x": x, "esp": esp}
 
 # scale esp
 if scale_esp:
@@ -259,6 +257,8 @@ hp_best_epoch = np.argmin(hp_hist.history["val_loss"])
 ##### 5. Prediction
 # Scale testdata with mean and var from traindata
 testcoords=(coords[unused[:ntest]]-data["x_mean"])/(data["x_var"]**0.5)
+# Extract ESP data
+esp_raw = xyz_esp_data[:, :, 4] # is (nrdata, 85)
 # Predictions
 if  esp_in_traindata:
     hp_pred = hp_model.predict([testcoords,esp_raw[unused[:ntest]]])
