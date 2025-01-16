@@ -113,6 +113,8 @@ esp_test  = esp_grads_test[:, :, 0]
 # Check whether ESP data is included in the training data
 if esp_train.shape[1] == 0:
     esp_in_traindata = False
+else:
+    esp_in_traindata = True
 
 # Store train and test data
 data = {"coords": coords_train, "esp": esp_train, "targets": targets_train}
