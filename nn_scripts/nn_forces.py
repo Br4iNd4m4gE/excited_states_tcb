@@ -319,7 +319,7 @@ plt.hist2d(y_test[:,0], test_pred_rescaled[:,0], bins=100, cmin=1, cmap='inferno
 plt.xlabel('True Values [Eh]')
 plt.ylabel('Predictions [Eh]')
 plt.colorbar()
-plt.plot([min(y_test[:,0]),max(y_test[:,0])], [min(y_test[:,0]), max(y_test[:,0])])
+plt.plot([min(y_test[:,0]), max(y_test[:,0])], [min(y_test[:,0]), max(y_test[:,0])])
 plt.savefig("tot_ene.png", dpi=300)
 plt.clf()
 
@@ -328,8 +328,8 @@ plt.hist2d(forces_test * HaB_to_eVA, forces_pred * HaB_to_eVA, bins=100, cmin=1,
 plt.xlabel('True Values [eV/A]')
 plt.ylabel('Predictions [eV/A]')
 plt.colorbar()
-plt.plot([-13.5,13.5],[-13.5,13.5])
-plt.savefig("forces_cmin1.png",dpi=300)
+plt.plot([-13.5,13.5], [-13.5,13.5])
+plt.savefig("forces_cmin1.png", dpi=300)
 plt.clf()
 
 #Forces 50
@@ -337,6 +337,6 @@ plt.hist2d(forces_test * HaB_to_eVA, forces_pred * HaB_to_eVA, bins=100, cmin=50
 plt.xlabel('True Values [eV/A]')
 plt.ylabel('Predictions [eV/A]')
 plt.colorbar()
-plt.plot([-13.5,13.5],[-13.5,13.5])
-plt.savefig("forces_cmin50.png",dpi=300)
+plt.plot([-13.5,13.5], [-13.5,13.5])
+plt.savefig("forces_cmin50.png", dpi=300)
 plt.clf()
