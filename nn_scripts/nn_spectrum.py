@@ -15,7 +15,7 @@ import keras_tuner as kt
 from sklearn.preprocessing import StandardScaler
 # sys.path.append("/home/cschmidt/bin")
 sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, generate_invd_list, get_file_length, extract_number_of_atoms
+from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, generate_invd_list, get_file_length, extract_number_of_atoms, unit_conversions
 from pyNNsMD.nn_pes_src.device import set_gpu
 from pyNNsMD.utils.loss import r2_metric
 from pyNNsMD.layers.mlp import MLP
@@ -233,13 +233,12 @@ class Logger(object):
         # this flush method is needed for python 3 compatibility.
         pass  
 sys.stdout=Logger()
-# david logger end
 
 ###########################  Start of Sript  ##################################
 
 ##### 0. Constants and Definitions
-Ha2eV = 27.211396132
-A2Bohr = 1.8897259886
+Ha2eV, A2Bohr = unit_conversions["Ha2eV"], unit_conversions["A2Bohr"]
+
 stop_early = ks.callbacks.EarlyStopping(monitor='val_loss', # which quantity to monitor
                                         patience=callback_patience, # how many epochs without improvement to tolerate
                                         restore_best_weights=True # reset weights to those of best model
