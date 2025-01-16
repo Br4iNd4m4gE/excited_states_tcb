@@ -41,9 +41,7 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 ###########################   User section   #################################
 
 # paths and output
-# traindata = "nn_both_isomers_cleaned_delta.txt" # full path of traindata
 traindata = args.file
-# outpath="/data/cschmidt/excited_states/data_energy" # Here stuff is written
 outpath = os.getcwd() # Here stuff is written
 mod_outpath=join(outpath, "best_model") # for model, params, unused indices 
 hp_outpath=join(outpath, "outputtuner") # save tuner trials
@@ -77,20 +75,16 @@ callback_patience = 250 # how many epoches without improvement are tolerated
 # hyperparameter search
 neurons_min = 20 # only hp-model
 neurons_max = 100 # only hp-model
-# neurons_min = neurons_max = 30 for best model so far
 neurons_step = 5 # only hp-model
 layers_min = 2 # only hp-model
 layers_max = 8 # only hp-model
-# layesr_min = layers_max = 2 for best model so far
 layers_step = 1 # only hp-model
 regulizer = "l2" # only hp-model
 learning_rates = [1e-3, 5e-4, 1e-4, 5e-5] # only hp-model
-#learning_rates = [1e-4] for best model so far
 hp_maxepochs = 20 # for tuner object 
 hp_factor = 2 # for tuner object
 
 # original-esp model to compare to
-create_origmodel = True # one model without HP search is trained and compared
 origmod_outpath = join(outpath, "orig_best_model") # for model, params, unused indices 
 orig_neurons = 30 # neurons in mlp layer in orig-model
 orig_learning_rate = 1e-4 # learning rate of orig-model
@@ -301,14 +295,17 @@ if scale_esp:
 
 # append dictionaries with energy
 data["targets"] = ene
+
 #check distribution
 plt.hist(ene[:,1],bins=20)
-plt.savefig(join(outpath, "osc_distribution.png"), dpi=300)    
+plt.savefig(join(outpath, "osc_distribution.png"), dpi=300)
+
 ## scaling
 geoscaler = StandardScaler()
 data["x_mean"] = geoscaler.fit(data["x"].reshape(-1,1)).mean_
 data["x_var"] = geoscaler.var_
-data["x_scaled"]= (data["x"]-data["x_mean"])/(data["x_var"]**0.5) 
+data["x_scaled"]= (data["x"]-data["x_mean"])/(data["x_var"]**0.5)
+
 # same with energy
 targetscaler = StandardScaler()
 data["targets_scaled"] = targetscaler.fit_transform(data["targets"].reshape(-1,2))
@@ -334,9 +331,6 @@ if clean_up_hpoutpath: # removes directory which can be necessary
 if esp_in_traindata:
     tuner = kt.Hyperband(
         hp_simple_model_site,
-        #hypermodel=hp_simple_model,
-        # objective = kt.Objective("val_r2_metric", "max"), # müsste gehen! 
-        # objective = "loss", # geht! Aber nicht val_loss
         objective=kt.Objective("val_r2_metric", "max"),
         #max_trials = 3,
         max_epochs = hp_maxepochs,
@@ -345,9 +339,6 @@ if esp_in_traindata:
 elif not esp_in_traindata:
     tuner = kt.Hyperband(
         hp_simple_model_site_noesp,
-        #hypermodel=hp_simple_model,
-        # objective = kt.Objective("val_r2_metric", "max"), # müsste gehen! 
-        # objective = "loss", # geht! Aber nicht val_loss
         objective=kt.Objective("val_r2_metric", "max"),
         #max_trials = 3,
         max_epochs = hp_maxepochs,
@@ -383,38 +374,6 @@ elif not esp_in_traindata:
 best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
 hp_model = tuner.hypermodel.build(best_hps)
 
-# for comparison build the default classical nn-esp model. Some input is needed:
-if create_origmodel:
-    # model needs interatomic dists
-    geom_idx = [(i,j) for i,j in combinations(range(natoms), 2)]
-    interatomic_dists = np.array(geom_idx) # this is [ [0,1],[0,2],...,[83,84] ]
-        
-    # model needs subnets
-    if esp_in_traindata:
-        subnets = {
-            "monolith" : SubNet(neurons = orig_neurons, # number of neurons per hidden dense layer
-                                depth = orig_layer_depth, # number of fully connected hidden layers
-                                activ=dense_activ, # activation function for hidden layers
-                                final_activ = final_activ, # act func for final subnet output layer
-                                num_outputs = 2, # number of output neurons of MLP subunit
-                                rep = "both") # 'geom' assumes (natoms,3) input, erg preprocessing
-            }
-    else:
-        subnets = {
-            "monolith" : SubNet(neurons = orig_neurons, # number of neurons per hidden dense layer
-                                depth = orig_layer_depth, # number of fully connected hidden layers
-                                activ=dense_activ, # activation function for hidden layers
-                                final_activ = final_activ, # act func for final subnet output layer
-                                num_outputs = 1, # number of output neurons of MLP subunit
-                                rep = "geom") # 'geom' assumes (natoms,3) input, erg preprocessing
-            }    
-        
-    # build orig_model
-    orig_model = build_model(subnets, output_spec, natoms, interatomic_dists,
-                        norm=norm, loss=loss,
-                        learning_rate = orig_learning_rate, print_summary=False,
-                        make_subnet_predictions_accessible=False)
-
 
 ##### 4. Training
 # Train the Model: First, calculate the representations for all training 
@@ -427,30 +386,22 @@ if norm == "const": # eigentlich immer oder?
     # now the scaler of feat_std layer must be set. So weights and biases of this
     # layer must be so that x -> x-µ/std
     set_const_normalization_from_features(feat_precomp, hp_model)
-    if create_origmodel:
-        set_const_normalization_from_features(feat_precomp, orig_model)
 
 # fit the models
 if esp_in_traindata:
     hp_hist = hp_model.fit([data["x_scaled"], data["esp"]], target, epochs=epochs,
                      validation_split=0.1, verbose=2, callbacks=[stop_early,lr_reduction])
-    if create_origmodel:
-        orig_hist = orig_model.fit([data["x_scaled"], data["esp"]], target, epochs=epochs,
-                            validation_split=0.1, verbose=2, callbacks=[stop_early,lr_reduction])
+
 elif not esp_in_traindata:
     hp_hist = hp_model.fit(data["x_scaled"], target, epochs=epochs,
                      validation_split=0.1, verbose=2, callbacks=[stop_early])
-    if create_origmodel:
-        orig_hist = orig_model.fit(data["x_scaled"], target, epochs=epochs,
-                            validation_split=0.1, verbose=2, callbacks=[stop_early])
 
 # Save model
 hp_model.save(mod_outpath)
-if create_origmodel: orig_model.save(origmod_outpath)
 
 # Get best epoch
 hp_best_epoch = np.argmin(hp_hist.history["val_loss"])
-if create_origmodel: orig_best_epoch = np.argmin(orig_hist.history["val_loss"])
+
 
 ##### 5. Prediction
 # Scale testdata with mean and var from traindata
@@ -458,30 +409,28 @@ testcoords=(coords[unused[:ntest]]-data["x_mean"])/(data["x_var"]**0.5)
 # Predictions
 if  esp_in_traindata:
     hp_pred = hp_model.predict([testcoords,esp_raw[unused[:ntest]]])
-    if create_origmodel: orig_pred = orig_model.predict([testcoords,esp_raw[unused[:ntest]]])
 elif not esp_in_traindata:
     hp_pred = hp_model.predict(testcoords)
-    if create_origmodel: orig_pred = orig_model.predict(testcoords)
     
 ##### 6. Evaluation
 # scale the normalized prediction back to the natural scale of the data
 hp_pred_scaled = targetscaler.inverse_transform(hp_pred)
-if create_origmodel: orig_pred_scaled = targetscaler.inverse_transform(orig_pred)
+# if create_origmodel: orig_pred_scaled = targetscaler.inverse_transform(orig_pred)
 # scale the references for the test data to the normalized scale for evaluation
 ref_scaled = targetscaler.transform(energies[unused[:ntest]].reshape(-1,2))
 
 # get rescaled predictions in eV
 energies_eV=energies[unused[:ntest],0]*27.2114
 hp_pred_scaled_eV=hp_pred_scaled[:,0]*27.2114
-if create_origmodel: orig_pred_scaled_eV=orig_pred_scaled[:,0]*27.2114
+# if create_origmodel: orig_pred_scaled_eV=orig_pred_scaled[:,0]*27.2114
 
 # run keras model evaluation
 if esp_in_traindata:
     hp_metrics = hp_model.evaluate([testcoords, esp_raw[unused[:ntest]]], ref_scaled)
-    if create_origmodel: orig_metrics = orig_model.evaluate([testcoords,esp_raw[unused[:ntest]]], ref_scaled)
+    # if create_origmodel: orig_metrics = orig_model.evaluate([testcoords,esp_raw[unused[:ntest]]], ref_scaled)
 elif not esp_in_traindata:
     hp_metrics = hp_model.evaluate(testcoords, ref_scaled)
-    if create_origmodel: orig_metrics = orig_model.evaluate(testcoords, ref_scaled)
+    # if create_origmodel: orig_metrics = orig_model.evaluate(testcoords, ref_scaled)
 
 # Output important metrics    
 print("\n\n", 22 * "-", "\n\t\tSummary\n", 22 * "-")
@@ -504,31 +453,31 @@ print("---")
 print("best val loss (atomic): ", hp_hist.history["val_loss"][hp_best_epoch])
 print("best val R2: ", hp_hist.history["val_r2_metric"][hp_best_epoch])
 
-if create_origmodel:
-    print("\n\tPerformance of original model:")
-    print("This is a model trained without a HP search and its only use is for comparison.")
-    orig_test_mae_eV = mean_absolute_error(energies_eV,orig_pred_scaled_eV)
-    orig_test_mae_osc = mean_absolute_error(energies[unused[:ntest],1],orig_pred_scaled[:,1])
-    print("test loss: ", orig_metrics[0])
-    # print("test MAE (atomic): ", orig_metrics[1])
-    print("test MAE (eV): ", orig_test_mae_eV)
-    print("test MAE Osc: ", orig_test_mae_osc)
-    print("test R2: ", orig_metrics[2])
-    print(f"best epoch: {orig_best_epoch}")
-    print("---")
-    print("best train loss (atomic): ", orig_hist.history["loss"][orig_best_epoch])
-    print("best train R2: ", orig_hist.history["r2_metric"][orig_best_epoch])
-    print("---")
-    print("best val loss (atomic): ", orig_hist.history["val_loss"][orig_best_epoch])
-    print("best val R2: ", orig_hist.history["val_r2_metric"][orig_best_epoch])
+# if create_origmodel:
+#     print("\n\tPerformance of original model:")
+#     print("This is a model trained without a HP search and its only use is for comparison.")
+#     orig_test_mae_eV = mean_absolute_error(energies_eV,orig_pred_scaled_eV)
+#     orig_test_mae_osc = mean_absolute_error(energies[unused[:ntest],1],orig_pred_scaled[:,1])
+#     print("test loss: ", orig_metrics[0])
+#     # print("test MAE (atomic): ", orig_metrics[1])
+#     print("test MAE (eV): ", orig_test_mae_eV)
+#     print("test MAE Osc: ", orig_test_mae_osc)
+#     print("test R2: ", orig_metrics[2])
+#     print(f"best epoch: {orig_best_epoch}")
+#     print("---")
+#     print("best train loss (atomic): ", orig_hist.history["loss"][orig_best_epoch])
+#     print("best train R2: ", orig_hist.history["r2_metric"][orig_best_epoch])
+#     print("---")
+#     print("best val loss (atomic): ", orig_hist.history["val_loss"][orig_best_epoch])
+#     print("best val R2: ", orig_hist.history["val_r2_metric"][orig_best_epoch])
 
 ##### 7. Write information to files
 # save indices not used for training to file for later use in tests
 np.savetxt(join(mod_outpath, "indices_for_testing_all.txt"), unused)
 np.savetxt(join(mod_outpath, "indices_for_testing_testdata.txt"), unused[:ntest])
-if create_origmodel:
-    np.savetxt(join(origmod_outpath, "indices_for_testing_all.txt"), unused)
-    np.savetxt(join(origmod_outpath, "indices_for_testing_testdata.txt"), unused[:ntest])
+# if create_origmodel:
+#     np.savetxt(join(origmod_outpath, "indices_for_testing_all.txt"), unused)
+#     np.savetxt(join(origmod_outpath, "indices_for_testing_testdata.txt"), unused[:ntest])
 #check distribution
 plt.hist(energies[:,1],bins=20)
 plt.savefig(join(outpath, "osc_distribution_last.png"), dpi=300)
@@ -538,11 +487,11 @@ np.savetxt(join(mod_outpath, 'hp_ref_energies_eV.dat'), energies_eV)
 np.savetxt(join(mod_outpath, 'hp_ref_osc.dat'), energies[unused[:ntest],1])
 np.savetxt(join(mod_outpath, 'hp_predicted_energies_eV.dat'), hp_pred_scaled_eV)
 np.savetxt(join(mod_outpath, 'hp_predicted_osc.dat'), hp_pred_scaled[:,1])
-if create_origmodel:
-    np.savetxt(join(origmod_outpath, 'hp_ref_energies_eV.dat'), energies_eV)
-    np.savetxt(join(origmod_outpath, 'hp_ref_osc.dat'), energies[unused[:ntest],1])
-    np.savetxt(join(origmod_outpath, 'hp_predicted_energies_eV.dat'), orig_pred_scaled_eV)
-    np.savetxt(join(origmod_outpath, 'hp_predicted_osc.dat'), orig_pred_scaled[:,1])
+# if create_origmodel:
+#     np.savetxt(join(origmod_outpath, 'hp_ref_energies_eV.dat'), energies_eV)
+#     np.savetxt(join(origmod_outpath, 'hp_ref_osc.dat'), energies[unused[:ntest],1])
+#     np.savetxt(join(origmod_outpath, 'hp_predicted_energies_eV.dat'), orig_pred_scaled_eV)
+#     np.savetxt(join(origmod_outpath, 'hp_predicted_osc.dat'), orig_pred_scaled[:,1])
     
 ##### 8. Plotting
 # Plot training progress
@@ -561,19 +510,19 @@ if plot_learning_curve:
     #plt.show()
     
     # same for orig_model
-    if create_origmodel:
-        f, ax = plt.subplots(1, figsize=(6,6))
-        ax.plot(np.arange(len(orig_hist.history["loss"])), orig_hist.history["loss"], label="training loss")
-        ax.plot(np.arange(len(orig_hist.history["loss"])), orig_hist.history["val_loss"], label="validation loss")
-        ax.set_yscale("log")
-        ax.set_ylabel("log(MSE)")
-        ax.set_xlabel("epochs")
-        ax.plot(orig_best_epoch, orig_hist.history["val_loss"][orig_best_epoch], ls="", marker="x", ms=10, c="black", label="best model")
-        ax.axvline(x=orig_best_epoch, color="gray", ls="--")
-        ax.axhline(y=orig_hist.history["val_loss"][orig_best_epoch], color="gray", ls="--")
-        ax.legend()
-        f.savefig(join(origmod_outpath, "test-loss.png"), dpi=300)
-        #plt.show()
+    # if create_origmodel:
+    #     f, ax = plt.subplots(1, figsize=(6,6))
+    #     ax.plot(np.arange(len(orig_hist.history["loss"])), orig_hist.history["loss"], label="training loss")
+    #     ax.plot(np.arange(len(orig_hist.history["loss"])), orig_hist.history["val_loss"], label="validation loss")
+    #     ax.set_yscale("log")
+    #     ax.set_ylabel("log(MSE)")
+    #     ax.set_xlabel("epochs")
+    #     ax.plot(orig_best_epoch, orig_hist.history["val_loss"][orig_best_epoch], ls="", marker="x", ms=10, c="black", label="best model")
+    #     ax.axvline(x=orig_best_epoch, color="gray", ls="--")
+    #     ax.axhline(y=orig_hist.history["val_loss"][orig_best_epoch], color="gray", ls="--")
+    #     ax.legend()
+    #     f.savefig(join(origmod_outpath, "test-loss.png"), dpi=300)
+    #     #plt.show()
         
 # Plot Scatter
 if plot_scatters:
@@ -607,36 +556,36 @@ if plot_scatters:
     fig.savefig(join(mod_outpath, "scatter_osc.png"), dpi=300)
 
         
-    # same for orig_model
-    if create_origmodel:
-        fig, ax = plt.subplots(1, figsize=(6,6))
-        ax.hist2d(energies_eV, orig_pred_scaled_eV.flatten(), 
-                  bins=1000, # Just for Tests; Mila wrote 1000
-                  cmin=1,  # Just for Tests; Mila wrote 1 
-                  norm=mcolors.PowerNorm(0.5))
-        b,t = get_limits([energies_eV, orig_pred_scaled_eV])
-        ax.set_xlabel("reference (eV)")
-        ax.set_ylabel("prediction (eV)")
-        ax.set_aspect("equal")
-        ax.set_ylim((b,t))
-        opti_ref = np.linspace(b,t,num=10)
-        ax.plot(opti_ref, opti_ref, c="C1")
-        fig.savefig(join(origmod_outpath, "scatter.png"), dpi=300)
-        plt.clf()
-        fig, ax = plt.subplots(1, figsize=(6,6))
-        ax.hist2d(energies[unused[:ntest],1], orig_pred_scaled[:,1].flatten(),
-                  bins=1000, # Just for Tests; Mila wrote 1000
-                  cmin=1,  # Just for Tests; Mila wrote 1 
-                  norm=mcolors.PowerNorm(0.5))
-        b,t = get_limits([energies[unused[:ntest],1], hp_pred_scaled[:,1]])
-        ax.set_xlabel("reference")
-        ax.set_ylabel("prediction")
-        ax.set_aspect("equal")
-        ax.set_ylim((b,t))
-        opti_ref = np.linspace(b,t,num=10)
-        ax.plot(opti_ref, opti_ref, c="C1")
-        fig.savefig(join(origmod_outpath, "scatter_osc.png"), dpi=300)
-        plt.clf()
+    # # same for orig_model
+    # if create_origmodel:
+    #     fig, ax = plt.subplots(1, figsize=(6,6))
+    #     ax.hist2d(energies_eV, orig_pred_scaled_eV.flatten(), 
+    #               bins=1000, # Just for Tests; Mila wrote 1000
+    #               cmin=1,  # Just for Tests; Mila wrote 1 
+    #               norm=mcolors.PowerNorm(0.5))
+    #     b,t = get_limits([energies_eV, orig_pred_scaled_eV])
+    #     ax.set_xlabel("reference (eV)")
+    #     ax.set_ylabel("prediction (eV)")
+    #     ax.set_aspect("equal")
+    #     ax.set_ylim((b,t))
+    #     opti_ref = np.linspace(b,t,num=10)
+    #     ax.plot(opti_ref, opti_ref, c="C1")
+    #     fig.savefig(join(origmod_outpath, "scatter.png"), dpi=300)
+    #     plt.clf()
+    #     fig, ax = plt.subplots(1, figsize=(6,6))
+    #     ax.hist2d(energies[unused[:ntest],1], orig_pred_scaled[:,1].flatten(),
+    #               bins=1000, # Just for Tests; Mila wrote 1000
+    #               cmin=1,  # Just for Tests; Mila wrote 1 
+    #               norm=mcolors.PowerNorm(0.5))
+    #     b,t = get_limits([energies[unused[:ntest],1], hp_pred_scaled[:,1]])
+    #     ax.set_xlabel("reference")
+    #     ax.set_ylabel("prediction")
+    #     ax.set_aspect("equal")
+    #     ax.set_ylim((b,t))
+    #     opti_ref = np.linspace(b,t,num=10)
+    #     ax.plot(opti_ref, opti_ref, c="C1")
+    #     fig.savefig(join(origmod_outpath, "scatter_osc.png"), dpi=300)
+    #     plt.clf()
 
 # save scaling parameters to GROMACS-readable format
 hypers = [
