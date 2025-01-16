@@ -129,8 +129,8 @@ class hpModelBuilder_energy_oscStr:
         model.compile(optimizer=opti, loss=self.loss, metrics=[[mae, self.r2_metric] for mae in maes]) # for history and tuning
         return model
     
-    def perform_hp_search(self, x_train, y_train, hp_maxepochs, hp_factor, stop_early, lr_reduction, hp_outpath):
+    def perform_hp_search(self, x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_outpath):
         tuner = kt.Hyperband(self.build_model, objective=kt.Objective("val_r2_metric", "max"), max_epochs=hp_maxepochs, factor=hp_factor, directory=hp_outpath)
-        tuner.search(x = x_train, y = y_train, verbose=2, epochs=hp_maxepochs, validation_split=0.1, callbacks=[stop_early, lr_reduction], batch_size=64)
+        tuner.search(x = x_train, y = y_train, verbose=2, epochs=hp_maxepochs, validation_split=0.1, callbacks=callbacks, batch_size=64)
         best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
         return best_hps, tuner

@@ -198,7 +198,12 @@ output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
     "QM/MM energy" : OutputSpec(from_subnets = "monolith",
                                 scaler = targetscaler
                                 )                                                
-} 
+}
+
+if esp_in_traindata:
+    callbacks = [stop_early, lr_reduction]
+else:
+    callbacks = [stop_early]
 
 # x and y data
 if esp_in_traindata:
@@ -219,11 +224,11 @@ if clean_up_hpoutpath: # removes directory which can be necessary
 model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss, r2_metric, norm)
 
 # Perform hyperparameter search
-best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs, hp_factor, stop_early, lr_reduction, hp_outpath)
+best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_outpath)
 
-print("------------------------------------------")
-print(f'''{best_hps.get("neurons")} neurons, {best_hps.get("layers")} layers, {best_hps.get("loss_ratio")} loss ratio, {best_hps.get("initial_lr")} initial learning rate and {best_hps.get("l2_penalty")} regulization penalty give the best results''')
-print("------------------------------------------")
+# print("------------------------------------------")
+# print(f'''{best_hps.get("neurons")} neurons, {best_hps.get("layers")} layers, {best_hps.get("loss_ratio")} loss ratio, {best_hps.get("initial_lr")} initial learning rate and {best_hps.get("l2_penalty")} regulization penalty give the best results''')
+# print("------------------------------------------")
 
 # Build and train the best model
 hp_model = tuner.hypermodel.build(best_hps)
@@ -242,13 +247,8 @@ if norm == "const": # eigentlich immer oder?
     set_const_normalization_from_features(feat_precomp, hp_model)
 
 # fit the models
-if esp_in_traindata:
-    hp_hist = hp_model.fit([data["x_scaled"], data["esp"]], target, epochs=epochs,
-                     validation_split=0.1, verbose=2, callbacks=[stop_early,lr_reduction])
-
-elif not esp_in_traindata:
-    hp_hist = hp_model.fit(data["x_scaled"], target, epochs=epochs,
-                     validation_split=0.1, verbose=2, callbacks=[stop_early])
+hp_hist = hp_model.fit(x_train, target, epochs=epochs,
+                     validation_split=0.1, verbose=2, callbacks=callbacks)
 
 # Save model
 hp_model.save(mod_outpath)
