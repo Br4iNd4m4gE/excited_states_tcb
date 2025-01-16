@@ -9,11 +9,9 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 mpl.use('Agg')
 
-from itertools import combinations
 import tensorflow.keras as ks
 import keras_tuner as kt
 from sklearn.preprocessing import StandardScaler
-# sys.path.append("/home/cschmidt/bin")
 sys.path.append(abspath(join(dirname(__file__), "..")))
 from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, generate_invd_list, get_file_length, extract_number_of_atoms, unit_conversions
 from pyNNsMD.nn_pes_src.device import set_gpu
@@ -21,7 +19,7 @@ from pyNNsMD.utils.loss import r2_metric
 from pyNNsMD.layers.mlp import MLP
 from pyNNsMD.layers.features import FeatureGeometric
 from pyNNsMD.layers.normalize import ConstLayerNormalization
-from pyNNsMD.models.hp import hp_simple_model_site
+from pyNNsMD.models.hp import hpModelBuilder_energy_oscStr
 
 from pyNNsMD.esp_nn import precompute_feature_in_chunks, set_const_normalization_from_features
 from pyNNsMD.esp_nn import OutputSpec, SubNet, build_model, get_limits
@@ -46,7 +44,6 @@ traindata = args.file
 outpath = os.getcwd() # Here stuff is written
 mod_outpath=join(outpath, "best_model") # for model, params, unused indices 
 hp_outpath=join(outpath, "outputtuner") # save tuner trials
-delete_tunertrials = False # delete the hp_outpath after script finished
 logfile = join(outpath, "logfile.txt") # writes all stdout into this file
 
 # training data and scenario
@@ -74,16 +71,19 @@ epochs = 2000 # for both models, needed for model.fit()
 callback_patience = 250 # how many epoches without improvement are tolerated
 
 # hyperparameter search
-neurons_min = 20 # only hp-model
-neurons_max = 100 # only hp-model
-neurons_step = 5 # only hp-model
-layers_min = 2 # only hp-model
-layers_max = 8 # only hp-model
-layers_step = 1 # only hp-model
-regulizer = "l2" # only hp-model
-learning_rates = [1e-3, 5e-4, 1e-4, 5e-5] # only hp-model
-hp_maxepochs = 20 # for tuner object 
-hp_factor = 2 # for tuner object
+hp_dict = {
+    "neurons_min":    20, # only hp-model
+    "neurons_max":    100, # only hp-model
+    "neurons_step":   5, # only hp-model
+    "layers_min":     2, # only hp-model
+    "layers_max":     8, # only hp-model
+    "layers_step":    1, # only hp-model
+    "regulizer":      "l2", # only hp-model
+    "learning_rates": [1e-3, 5e-4, 1e-4, 5e-5], # only hp-model
+}
+
+hp_maxepochs =   20 # for tuner object 
+hp_factor  =    2 # for tuner object
 
 # original-esp model to compare to
 origmod_outpath = join(outpath, "orig_best_model") # for model, params, unused indices 
@@ -182,16 +182,16 @@ plt.savefig(join(outpath, "osc_distribution.png"), dpi=300)
 
 ## scaling
 geoscaler = StandardScaler()
-data["x_mean"] = geoscaler.fit(data["x"].reshape(-1,1)).mean_
-data["x_var"] = geoscaler.var_
-data["x_scaled"]= (data["x"]-data["x_mean"])/(data["x_var"]**0.5)
+data["x_mean"]   = geoscaler.fit(data["x"].reshape(-1, 1)).mean_
+data["x_var"]    = geoscaler.var_
+data["x_scaled"] = (data["x"] - data["x_mean"]) / (data["x_var"] ** 0.5)
 
 # same with energy
 targetscaler = StandardScaler()
-data["targets_scaled"] = targetscaler.fit_transform(data["targets"].reshape(-1,2))
-data["targets_mean"] = targetscaler.mean_
-data["targets_var"] = targetscaler.var_
-target = data["targets_scaled"]
+data["targets_scaled"] = targetscaler.fit_transform(data["targets"].reshape(-1, 2))
+data["targets_mean"]   = targetscaler.mean_
+data["targets_var"]    = targetscaler.var_
+target                 = data["targets_scaled"]
     
 # otput_spec with scaler being already fitted to energy -> Must come after scaler.fit
 output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
@@ -200,58 +200,32 @@ output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
                                 )                                                
 } 
 
-##### 2. Hyperparameter Search
+# x and y data
+if esp_in_traindata:
+    x_train = [data["x_scaled"], data["esp"]]
+    y_train = data["targets_scaled"]
+else:
+    x_train = data["x_scaled"]
+    y_train = data["targets_scaled"]
+
+## 2. Hyperparameter Search
 # this is needed if tuner quits with "INFO:tensorflow:Oracle triggered exit"
 if clean_up_hpoutpath: # removes directory which can be necessary 
     import shutil 
     if os.path.isdir(hp_outpath):
         shutil.rmtree(hp_outpath) # = bash's rm -rf
-    
-# Instantiate tuner
-if esp_in_traindata:
-    tuner = kt.Hyperband(
-        hp_simple_model_site,
-        objective=kt.Objective("val_r2_metric", "max"),
-        #max_trials = 3,
-        max_epochs = hp_maxepochs,
-        factor = hp_factor,
-        directory = hp_outpath)
-elif not esp_in_traindata:
-    tuner = kt.Hyperband(
-        hp_simple_model_site_noesp,
-        objective=kt.Objective("val_r2_metric", "max"),
-        #max_trials = 3,
-        max_epochs = hp_maxepochs,
-        factor = hp_factor,
-        directory = hp_outpath)
 
-# control
-print("\n\tSearch Space Summary:")
-print(tuner.search_space_summary())
+# Initialize ModelBuilder
+model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss, r2_metric, norm)
 
-# actual search
-if esp_in_traindata:
-    tuner.search(x = [data["x_scaled"], data["esp"]], 
-                y = data["targets_scaled"], 
-                verbose =2,
-                epochs = hp_maxepochs,
-                validation_split=0.1, 
-                callbacks= [stop_early,lr_reduction],
-                batch_size= 64 
-                )
-elif not esp_in_traindata:
-    tuner.search(x = data["x_scaled"], 
-                y = data["targets_scaled"], 
-                verbose =1,
-                epochs = hp_maxepochs,
-                validation_split=0.1, 
-                callbacks= [stop_early],
-                batch_size= 64 
-                )
+# Perform hyperparameter search
+best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs, hp_factor, stop_early, lr_reduction, hp_outpath)
 
-##### 3. Building Models
-# set best hyperparams to best model
-best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
+print("------------------------------------------")
+print(f'''{best_hps.get("neurons")} neurons, {best_hps.get("layers")} layers, {best_hps.get("loss_ratio")} loss ratio, {best_hps.get("initial_lr")} initial learning rate and {best_hps.get("l2_penalty")} regulization penalty give the best results''')
+print("------------------------------------------")
+
+# Build and train the best model
 hp_model = tuner.hypermodel.build(best_hps)
 
 
@@ -406,7 +380,7 @@ with open(os.path.join(mod_outpath, "params.txt"), "w") as outf:
         outf.write(f"{k}\n")
 
 ##### 9. Clean up
-if delete_tunertrials:
-    shutil.rmtree(hp_outpath) # = bash's rm -rf
+# if delete_tunertrials:
+#     shutil.rmtree(hp_outpath) # = bash's rm -rf
     
 
