@@ -52,7 +52,6 @@ natoms = extract_number_of_atoms(traindata, lines_to_skip)
 print(f"Number of atoms detected in the input file {traindata} is {natoms}")
 coords_to_atomic = True
 esp_in_traindata = True
-scale_esp = False # if esp_in_traindata==False: the value of scale_esp doesn't matter
 linestotal = get_file_length(traindata)
 ntotal = linestotal / (natoms + 2)
 if not ntotal.is_integer():
@@ -165,10 +164,6 @@ esp = esp_tmp[:, :, 0]
 
 # store train and test data in dictionary
 data = {"x": x, "esp": esp}
-
-# scale esp
-if scale_esp:
-    data["esp"] = StandardScaler().fit_transform(data["esp"])
 
 # append dictionaries with energy
 data["targets"] = ene
