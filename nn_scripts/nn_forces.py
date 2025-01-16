@@ -83,11 +83,11 @@ hp_dict   = {
 
 ############################ START OF SCRIPT ##################################
 
-#Inputs
+# Inputs
 inputfile = args.file
 n_atoms = extract_number_of_atoms(inputfile, lines_to_skip)
 
-#Constants and Initializations
+# Constants and Initializations
 AtoBohr, HaB_to_eVA = unit_conversions["A2Bohr"], unit_conversions["HaB_to_eVA"]
 
 stop_early = tf.keras.callbacks.EarlyStopping(
@@ -104,11 +104,11 @@ stop_early = tf.keras.callbacks.EarlyStopping(
 
 x, y = load_data_excited_states_forces(inputfile, lines_to_skip)
 
-#generate train and test sets
+# Generate train and test sets
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)
 x_train, y_train, x_test, y_test = tf.convert_to_tensor(x_train), tf.convert_to_tensor(y_train), tf.convert_to_tensor(x_test), tf.convert_to_tensor(y_test)
 
-#get mask to filter large distances, scale output data and get input mean and variance for Normalization
+# Get mask to filter large distances, scale output data and get input mean and variance for Normalization
 first_preprocessor   = FirstInverseDistance()
 dummy, full_mask     = first_preprocessor(x_train)	#fullmask has True or False values for all distance checks in all samples
 reduced_mask         = tf.math.reduce_all(full_mask,0)	#if the distance is below a cutoff for all samples that distance is always considered

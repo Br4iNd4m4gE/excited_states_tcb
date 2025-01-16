@@ -88,6 +88,8 @@ plot_learning_curve = True # plot log(mse) vs. epochs
 # other
 clean_up_hpoutpath = True # delet hp_outpath before tuning (catch some errors 'oracle exited training' etc.)
 
+############################ PARAMETERS ##################################
+
 # Callbacks for training the model
 stop_early = ks.callbacks.EarlyStopping(monitor='val_loss', # which quantity to monitor
                                         patience=callback_patience, # how many epochs without improvement to tolerate
@@ -105,12 +107,10 @@ lr_reduction = ks.callbacks.ReduceLROnPlateau(
     cooldown=0,
     min_lr=1e-6)
 
-############################ START OF SCRIPT ##################################
-
-##### 0. Constants and Definitions
+# Constants
 Ha2eV, A2Bohr = unit_conversions["EhtoeV"], unit_conversions["A2Bohr"]
 
-##### 1. Data Preparation
+############################ START OF SCRIPT ##################################
 
 # Load and preprocess data
 xyz_esp_data, energies = parse_single_file(traindata, natoms) # energies and osc. str.
