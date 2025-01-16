@@ -2,14 +2,13 @@
 A hyperparameter search is done and the model is saved. The "mlmm_model" can be used
 for the ML-MM GROMACS implementation.'''
 
-import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
-import tensorflow.keras.backend as K
 import sys
 import argparse
-import subprocess
 import joblib
+import matplotlib.pyplot as plt
+import tensorflow as tf
+import tensorflow.keras.backend as K
 import matplotlib as mpl
 mpl.use('Agg')	#important for plotting while running on cluster
 
