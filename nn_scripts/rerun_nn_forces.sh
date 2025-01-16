@@ -107,3 +107,20 @@ if args.save:
             f.write(f"{pred_str}\n")
 
     print(f"Predictions saved to {output_file}")
+
+# Plot predictions vs true values
+plt.figure()
+plt.scatter(y[:, 0], prediction[:, 0], label="Total Energy")
+plt.xlabel("True Total Energy [eV]")
+plt.ylabel("Predicted Total Energy [eV]")
+plt.title("Total Energy Predictions")
+plt.legend()
+plt.savefig("total_energy_predictions.png")
+
+plt.figure()
+plt.scatter(forces_true, forces_pred, label="Forces")
+plt.xlabel("True Forces [eV/A]")
+plt.ylabel("Predicted Forces [eV/A]")
+plt.title("Forces Predictions")
+plt.legend()
+plt.savefig("forces_predictions.png")
