@@ -11,7 +11,7 @@ mpl.use('Agg')
 
 from itertools import combinations
 import tensorflow.keras as ks
-import kerastuner as kt
+import keras_tuner as kt
 from sklearn.preprocessing import StandardScaler
 # sys.path.append("/home/cschmidt/bin")
 sys.path.append(abspath(join(dirname(__file__), "..")))
