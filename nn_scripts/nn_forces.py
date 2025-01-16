@@ -4,19 +4,20 @@ for the ML-MM GROMACS implementation.'''
 
 import matplotlib.pyplot as plt
 import numpy as np
+import tensorflow as tf
+import tensorflow.keras.backend as K
+import sys
+import argparse
+import subprocess
+import joblib
+import matplotlib as mpl
+mpl.use('Agg')	#important for plotting while running on cluster
+
+from os.path import join, isdir, isfile, dirname, abspath
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score, mean_absolute_error
 from sklearn.model_selection import train_test_split
-import matplotlib as mpl
-mpl.use('Agg')	#important for plotting while running on cluster
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
-import keras_tuner as kt
-import sys
-import tensorflow.keras.backend as K
-import argparse
-from os.path import join, isdir, isfile, dirname, abspath
+
 sys.path.append(abspath(join(dirname(__file__), "..")))
 from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, generate_invd_list, get_file_length, extract_number_of_atoms, unit_conversions, load_data_excited_states_forces
 from pyNNsMD.utils.loss import custom_loss_forces
@@ -27,8 +28,6 @@ from pyNNsMD.layers.normalize import NormalizationLayer
 from pyNNsMD.layers.inverse_distance import InverseDistance, FirstInverseDistance
 from pyNNsMD.models.hp import hpModelBuilder
 
-import subprocess
-import joblib
 
 ############################
 
