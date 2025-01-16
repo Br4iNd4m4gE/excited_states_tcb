@@ -21,6 +21,7 @@ sys.path.append(abspath(join(dirname(__file__), "..")))
 from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, generate_invd_list, get_file_length, extract_number_of_atoms, unit_conversions, load_data_excited_states_forces
 from pyNNsMD.utils.loss import custom_loss_forces
 from pyNNsMD.nn_pes_src.device import set_gpu
+from pyNNsMD.layers.gradients import EnergyGradientLayer
 
 import subprocess
 import joblib
@@ -79,41 +80,41 @@ class WrapModel(keras.Model):
 		tf.print("wrap", outputs.shape)
 		return outputs_rescaled
 
-class CustomModel(keras.Model):
-	def call(self, inputs, **kwargs):
-		with tf.GradientTape() as tape:
-			tape.watch(inputs)
-			outputs = super().call(inputs)
-			output = outputs[:, :1]
-			grads = tape.gradient(output,inputs)
-			pred_forces = -grads[:, :, :3]
-			pred_forces = tf.reshape(pred_forces, [-1, n_atoms * 3])
-			allpred = tf.concat([output, pred_forces], 1)
-			tf.print("custom", allpred.shape)
-		return allpred
-	def train_step(self, data):
-		x, y = data
-		with tf.GradientTape(persistent=False) as tape:
-			tape.watch(x)
-			forces = y[:, 1:]
-			forces = tf.reshape(forces,[-1, n_atoms * 3])
-			allpred = self(x, training=True)
-			loss = self.compiled_loss(y,allpred, regularization_losses=self.losses)
-		train_vars = self.trainable_variables
-		weight_grads = tape.gradient(loss, train_vars)
-		self.optimizer.apply_gradients(zip(weight_grads, train_vars))
-		self.compiled_metrics.update_state(forces, allpred[:, 1:])	#metric MAE only compares forces not the energy
-		return {m.name: m.result() for m in self.metrics}
-	def test_step(self, data):
-		x, y = data
-		with tf.GradientTape(persistent=False) as tape:
-			tape.watch(x)
-			forces = y[:, 1:]
-			forces = tf.reshape(forces,[-1, n_atoms * 3])
-			allpred = self(x, training=False)
-			self.compiled_loss(y,allpred,regularization_losses=self.losses)
-		self.compiled_metrics.update_state(forces, allpred[:, 1:])	#metric MAE only compares forces not the energy
-		return {m.name: m.result() for m in self.metrics}
+# class CustomModel(keras.Model):
+# 	def call(self, inputs, **kwargs):
+# 		with tf.GradientTape() as tape:
+# 			tape.watch(inputs)
+# 			outputs = super().call(inputs)
+# 			output = outputs[:, :1]
+# 			grads = tape.gradient(output,inputs)
+# 			pred_forces = -grads[:, :, :3]
+# 			pred_forces = tf.reshape(pred_forces, [-1, n_atoms * 3])
+# 			allpred = tf.concat([output, pred_forces], 1)
+# 			tf.print("custom", allpred.shape)
+# 		return allpred
+# 	def train_step(self, data):
+# 		x, y = data
+# 		with tf.GradientTape(persistent=False) as tape:
+# 			tape.watch(x)
+# 			forces = y[:, 1:]
+# 			forces = tf.reshape(forces,[-1, n_atoms * 3])
+# 			allpred = self(x, training=True)
+# 			loss = self.compiled_loss(y,allpred, regularization_losses=self.losses)
+# 		train_vars = self.trainable_variables
+# 		weight_grads = tape.gradient(loss, train_vars)
+# 		self.optimizer.apply_gradients(zip(weight_grads, train_vars))
+# 		self.compiled_metrics.update_state(forces, allpred[:, 1:])	#metric MAE only compares forces not the energy
+# 		return {m.name: m.result() for m in self.metrics}
+# 	def test_step(self, data):
+# 		x, y = data
+# 		with tf.GradientTape(persistent=False) as tape:
+# 			tape.watch(x)
+# 			forces = y[:, 1:]
+# 			forces = tf.reshape(forces,[-1, n_atoms * 3])
+# 			allpred = self(x, training=False)
+# 			self.compiled_loss(y,allpred,regularization_losses=self.losses)
+# 		self.compiled_metrics.update_state(forces, allpred[:, 1:])	#metric MAE only compares forces not the energy
+# 		return {m.name: m.result() for m in self.metrics}
 
 #Gradients(Eh/Bohr) have to be calculated from true coordinates -> Input(x[Bohr],ESP[Eh]), layer calculates inverse distances, layer normalizes, dense trainable layers, output(Eh)
 class NormalizationLayer(tf.keras.layers.Layer):
@@ -210,7 +211,7 @@ def build_model(hp):
 
 	# Compile the model
 	loss_ratio  = hp.Choice("loss_ratio", hp_dict["loss_ratio"])
-	model       = CustomModel(inputs=inputs, outputs=outputs)
+	model       = EnergyGradientLayer(inputs=inputs, outputs=outputs, n_atoms=n_atoms)
 	lr_schedule = keras.optimizers.schedules.CosineDecayRestarts(initial_lr, 1e4, t_mul=1.5, m_mul=0.3, alpha=2e-3)
 	opt         = keras.optimizers.Adam(lr_schedule) #initialize optimizer
 	my_loss_fn  = custom_loss_forces(loss_ratio)

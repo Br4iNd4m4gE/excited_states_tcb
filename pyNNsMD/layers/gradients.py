@@ -184,6 +184,52 @@ class PropagateNACGradient2(ks.layers.Layer):
         config.update({"axis": self.axis})
         return config
 
+class EnergyGradientLayer(ks.Model):
+    """
+    Last layer of the model to calculate the gradients of the energy output.
+    -> Force NN
+    """
+    def __init__(self, n_atoms, **kwargs):
+        super().__init__(**kwargs)
+        self.n_atoms = n_atoms
+
+    def call(self, inputs, **kwargs):
+        with tf.GradientTape() as tape:
+            tape.watch(inputs)
+            outputs = super().call(inputs)
+            output = outputs[:, :1]
+            grads = tape.gradient(output,inputs)
+            pred_forces = -grads[:, :, :3]
+            pred_forces = tf.reshape(pred_forces, [-1, self.n_atoms * 3])
+            allpred = tf.concat([output, pred_forces], 1)
+            tf.print("custom", allpred.shape)
+        return allpred
+    
+    def train_step(self, data):
+        x, y = data
+        with tf.GradientTape(persistent=False) as tape:
+            tape.watch(x)
+            forces = y[:, 1:]
+            forces = tf.reshape(forces,[-1, self.n_atoms * 3])
+            allpred = self(x, training=True)
+            loss = self.compiled_loss(y,allpred, regularization_losses=self.losses)
+        train_vars = self.trainable_variables
+        weight_grads = tape.gradient(loss, train_vars)
+        self.optimizer.apply_gradients(zip(weight_grads, train_vars))
+        self.compiled_metrics.update_state(forces, allpred[:, 1:])	#metric MAE only compares forces not the energy
+        return {m.name: m.result() for m in self.metrics}
+    
+    def test_step(self, data):
+        x, y = data
+        with tf.GradientTape(persistent=False) as tape:
+            tape.watch(x)
+            forces = y[:, 1:]
+            forces = tf.reshape(forces,[-1, self.n_atoms * 3])
+            allpred = self(x, training=False)
+            self.compiled_loss(y,allpred,regularization_losses=self.losses)
+        self.compiled_metrics.update_state(forces, allpred[:, 1:])	#metric MAE only compares forces not the energy
+        return {m.name: m.result() for m in self.metrics}
+
 # class EnergyGradient(ks.layers.Layer):
 #     """
 #     Layer to calculate Gradient for NN energy output. Not used anymore.
