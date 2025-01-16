@@ -10,6 +10,8 @@ pythonfile=${pythonfile#"/srv/nfs"}
 
 data_file="$2" # mandatory
 
+config_file="$3" # optional
+
 # Which GPU?
 gpu_id=$( echo $QUEUE | awk '/a/ {print 0} /b/ {print 1}  /c/ {print 2}  /d/ {print 3}')
 
@@ -85,12 +87,13 @@ ulimit -s unlimited
 # Start time of calculation
 start=$( date "+%s" )
 
-if [ -z "$data_file" ]
-then
-    echo "Error: data_file is empty or not set"
+if [ ! -f "$data_file" ] || [ ! -s "$data_file" ]; then
+    echo "Error: data_file does not exist or is empty"
     exit 1
-else
+elif [ -z "$config_file" ]; then
     time python3 $pythonfile -g $gpu_id -f $data_file
+else
+    time python3 $pythonfile -g $gpu_id -f $data_file -c $config_file
 fi
 
 # End time of calculation

@@ -84,10 +84,7 @@ x, y = load_data_excited_states_forces(inputfile, lines_to_skip)
 
 #generate train and test sets
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)
-x_train = tf.convert_to_tensor(x_train)
-y_train = tf.convert_to_tensor(y_train)
-x_test  = tf.convert_to_tensor(x_test)
-y_test  = tf.convert_to_tensor(y_test)
+x_train, y_train, x_test, y_test = tf.convert_to_tensor(x_train), tf.convert_to_tensor(y_train), tf.convert_to_tensor(x_test), tf.convert_to_tensor(y_test)
 
 #get mask to filter large distances, scale output data and get input mean and variance for Normalization
 first_preprocessor   = FirstInverseDistance()
