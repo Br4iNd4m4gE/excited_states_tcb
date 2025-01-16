@@ -117,10 +117,10 @@ xyz_esp_data, energies, natoms, ntotal = load_data_excited_states_energies(input
 print(f"Number of Data points in the input file {inputfile} is {len(xyz_esp_data)}")
 
 # Calculate number of training and test data points
-ntrain = int(ntotal * trainPercentage)
-ntest = ntotal - ntrain
+# ntest = ntotal - ntrain
 
 # Shuffle and split data
+ntrain = int(ntotal * trainPercentage)
 coords_train, esp_grads_train, targets_train, coords_test, esp_grads_test, targets_test = shuffle_and_split_train_test(xyz_esp_data, energies, ntrain)
 
 # Extract ESP data
@@ -295,11 +295,11 @@ if plot_scatters:
     fig.savefig(join(mod_outpath, "scatter.png"), dpi=300)
     plt.clf()
     fig, ax = plt.subplots(1, figsize=(6,6))
-    ax.hist2d(targets_train[:, 1], hp_pred_scaled[:, 1],
+    ax.hist2d(targets_test[:, 1], hp_pred_scaled[:, 1],
                   bins=1000, # Just for Tests; Mila wrote 1000
                   cmin=1, # Just for Tests; Mila wrote 1 
                   norm=mcolors.PowerNorm(0.5))
-    b, t = get_limits([targets_train[:, 1], hp_pred_scaled[:, 1]])
+    b, t = get_limits([targets_test[:, 1], hp_pred_scaled[:, 1]])
     ax.set_xlabel("reference")
     ax.set_ylabel("prediction")
     ax.set_aspect("equal")
