@@ -22,6 +22,7 @@ from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, generate
 from pyNNsMD.utils.loss import custom_loss_forces
 from pyNNsMD.nn_pes_src.device import set_gpu
 from pyNNsMD.layers.gradients import EnergyGradientLayer
+from pyNNsMD.models.wrap import WrapForcesModel
 
 import subprocess
 import joblib
@@ -67,18 +68,18 @@ hp = kt.HyperParameters()
 
 # Classes and Definitions
 
-class WrapModel(keras.Model):
-	#important to save model for MLMM
-	def __init__(self, model, mean, var):
-		super().__init__()
-		self.submodel = model
-		self.mean = mean
-		self.std = tf.sqrt(var)
-	def call(self, inputs):
-		outputs = self.submodel(inputs)
-		outputs_rescaled = self.std * outputs + self.mean
-		tf.print("wrap", outputs.shape)
-		return outputs_rescaled
+# class WrapModel(keras.Model):
+# 	#important to save model for MLMM
+# 	def __init__(self, model, mean, var):
+# 		super().__init__()
+# 		self.submodel = model
+# 		self.mean = mean
+# 		self.std = tf.sqrt(var)
+# 	def call(self, inputs):
+# 		outputs = self.submodel(inputs)
+# 		outputs_rescaled = self.std * outputs + self.mean
+# 		tf.print("wrap", outputs.shape)
+# 		return outputs_rescaled
 
 # class CustomModel(keras.Model):
 # 	def call(self, inputs, **kwargs):
@@ -275,7 +276,7 @@ print(best_model(x_test).shape, x_test.shape, y_test_scaled.shape)
 
 #Save models
 best_model.save("best_model")
-mlmm_model = WrapModel(best_model, scaler.mean_, 1.0)
+mlmm_model = WrapForcesModel(best_model, scaler.mean_, 1.0)
 test_pred_rescaled = mlmm_model(x_test)
 mlmm_model.save("mlmm_model")
 
