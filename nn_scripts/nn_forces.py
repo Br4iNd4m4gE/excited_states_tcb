@@ -25,6 +25,7 @@ from pyNNsMD.layers.gradients import EnergyGradientLayer
 from pyNNsMD.layers.wrapper import WrapForcesModel
 from pyNNsMD.layers.normalize import NormalizationLayer
 from pyNNsMD.layers.inverse_distance import InverseDistance, FirstInverseDistance
+from pyNNsMD.models.hp import hpModelBuilder
 
 import subprocess
 import joblib
@@ -64,7 +65,7 @@ hp_dict = {
 
 #Constants and Initializations
 AtoBohr, HaB_to_eVA = unit_conversions["A2Bohr"], unit_conversions["HaB_to_eVA"]
-hp = kt.HyperParameters()
+# hp = kt.HyperParameters()
 
 ###########################  Start of Sript  ##################################
 
@@ -78,31 +79,31 @@ stop_early = tf.keras.callbacks.EarlyStopping(
     restore_best_weights = True
 )
 
-#build model
-def build_model(hp):
-	# Define the model
-	inputs     = keras.Input(shape=(n_atoms, 4, ))
-	l2_penalty = hp.Choice("l2_penalty", hp_dict["l2_penalty"])
-	initial_lr = hp.Choice("initial_lr", hp_dict["initial_lr"])
-	neurons    = hp.Int("neurons", hp_dict["neurons_min"], hp_dict["neurons_max"], hp_dict["neurons_step"])
-	prepped    = preprocessor(inputs)
-	normed     = normalizer(prepped)
+# #build model
+# def build_model(hp):
+# 	# Define the model
+# 	inputs     = keras.Input(shape=(n_atoms, 4, ))
+# 	l2_penalty = hp.Choice("l2_penalty", hp_dict["l2_penalty"])
+# 	initial_lr = hp.Choice("initial_lr", hp_dict["initial_lr"])
+# 	neurons    = hp.Int("neurons", hp_dict["neurons_min"], hp_dict["neurons_max"], hp_dict["neurons_step"])
+# 	prepped    = preprocessor(inputs)
+# 	normed     = normalizer(prepped)
 
-	# Build the model
-	x1 = layers.Dense(neurons, activation='elu',kernel_regularizer=keras.regularizers.l2(l2_penalty))(normed)
-	nrlayers = hp.Int("layers",hp_dict["layers_min"], hp_dict["layers_max"], hp_dict["layers_step"])
-	for i in range(nrlayers-1):
-		x1 = layers.Dense(neurons, activation='elu',kernel_regularizer=keras.regularizers.l2(l2_penalty))(x1)
-	outputs = layers.Dense(1)(x1) # hp search only for energies? <---------------------------------------------------------
+# 	# Build the model
+# 	x1 = layers.Dense(neurons, activation='elu',kernel_regularizer=keras.regularizers.l2(l2_penalty))(normed)
+# 	nrlayers = hp.Int("layers",hp_dict["layers_min"], hp_dict["layers_max"], hp_dict["layers_step"])
+# 	for i in range(nrlayers-1):
+# 		x1 = layers.Dense(neurons, activation='elu',kernel_regularizer=keras.regularizers.l2(l2_penalty))(x1)
+# 	outputs = layers.Dense(1)(x1) # hp search only for energies? <---------------------------------------------------------
 
-	# Compile the model
-	loss_ratio  = hp.Choice("loss_ratio", hp_dict["loss_ratio"])
-	model       = EnergyGradientLayer(inputs=inputs, outputs=outputs, n_atoms=n_atoms)
-	lr_schedule = keras.optimizers.schedules.CosineDecayRestarts(initial_lr, 1e4, t_mul=1.5, m_mul=0.3, alpha=2e-3)
-	opt         = keras.optimizers.Adam(lr_schedule) #initialize optimizer
-	my_loss_fn  = custom_loss_forces(loss_ratio)
-	model.compile(optimizer=opt, loss=my_loss_fn, metrics=["mae"])
-	return model
+# 	# Compile the model
+# 	loss_ratio  = hp.Choice("loss_ratio", hp_dict["loss_ratio"])
+# 	model       = EnergyGradientLayer(inputs=inputs, outputs=outputs, n_atoms=n_atoms)
+# 	lr_schedule = keras.optimizers.schedules.CosineDecayRestarts(initial_lr, 1e4, t_mul=1.5, m_mul=0.3, alpha=2e-3)
+# 	opt         = keras.optimizers.Adam(lr_schedule) #initialize optimizer
+# 	my_loss_fn  = custom_loss_forces(loss_ratio)
+# 	model.compile(optimizer=opt, loss=my_loss_fn, metrics=["mae"])
+# 	return model
 
 ###########################  Start of Script  ##################################
 
@@ -144,13 +145,16 @@ scaler.mean_[1:]     = 0	#gradients should not be changed shifted
 y_train_scaled       = scaler.transform(y_train)
 y_test_scaled        = scaler.transform(y_test)
 
-#Training
-tuner = kt.Hyperband(build_model, objective="val_mae", max_epochs=hp_epochs, factor=hp_factor,hyperband_iterations=1, directory="trials")
-tuner.search(x_train, y_train_scaled, batch_size=batch_size, epochs=hp_epochs, callbacks=[stop_early], verbose=2, validation_split=0.2)
-best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
+# Initialize ModelBuilder
+model_builder = hpModelBuilder(hp_dict, n_atoms, preprocessor, normalizer)
+
+# Perform hyperparameter search
+best_hps, tuner = model_builder.perform_hp_search(x_train, y_train_scaled, hp_epochs, hp_factor, batch_size, stop_early)
+
 print("------------------------------------------")
 print(f'''{best_hps.get("neurons")} neurons, {best_hps.get("layers")} layers, {best_hps.get("loss_ratio")} loss ratio, {best_hps.get("initial_lr")} initial learning rate and {best_hps.get("l2_penalty")} regulization penalty give the best results''')
 print("------------------------------------------")
+
 best_model = tuner.hypermodel.build(best_hps)
 hist = best_model.fit(x_train, y_train_scaled, batch_size=batch_size, epochs=fit_epochs, verbose=2, validation_split=0.2)
 losses = hist.history["loss"]
