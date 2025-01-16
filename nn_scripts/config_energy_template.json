@@ -1,22 +1,22 @@
 {
-    "training_data_percentage": "0.9",
-    "n_comment_lines": "1",
+    "training_data_percentage": 0.9,
+    "n_comment_lines": 1,
     "training_loss_function": "mean_squared_error",
     "layer_activation_function": "leaky_softplus",
-    "config_alpha_layer_activation_function": "0.03",
+    "config_alpha_layer_activation_function": 0.03,
     "final_activation_function": "linear",
-    "epochs_best_model": "2000",
-    "callback_patience": "250",
+    "epochs_best_model": 2000,
+    "callback_patience": 250,
 
-    "hp_neurons_min": "20",
-    "hp_neurons_max": "100",
-    "hp_neurons_step": "5",
-    "hp_layers_min": "2",
-    "hp_layers_max": "8",
-    "hp_layers_step": "1",
+    "hp_neurons_min": 20,
+    "hp_neurons_max": 100,
+    "hp_neurons_step": 5,
+    "hp_layers_min": 2,
+    "hp_layers_max": 8,
+    "hp_layers_step": 1,
     "hp_regulizer": "l2",
-    "hp_learning_rates": "[1e-3, 5e-4, 1e-4, 5e-5]",
+    "hp_learning_rates": [1e-3, 5e-4, 1e-4, 5e-5],
 
-    "hp_epochs": "20",
-    "hp_factor": "2"
+    "hp_epochs": 20,
+    "hp_factor": 2
 }

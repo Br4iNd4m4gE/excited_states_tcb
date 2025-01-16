@@ -1,17 +1,17 @@
 {
-    "fit_epochs": "2000",
-    "n_comment_lines": "1",
-    "batch_size": "128",
-    "hp_epochs": "300",
-    "hp_factor": "18",
+    "fit_epochs": 2000,
+    "n_comment_lines": 1,
+    "batch_size": 128,
+    "hp_epochs": 300,
+    "hp_factor": 18,
 
-    "hp_neurons_min": "200",
-    "hp_neurons_max": "1000",
-    "hp_neurons_step": "50",
-    "hp_layers_min": "2",
-    "hp_layers_max": "4",
-    "hp_layers_step": "1",
-    "hp_initial_lr": "[1e-3, 5e-4, 1e-4]",
-    "hp_l2_penalty": "[1e-3, 5e-4, 1e-4,5e-5]",
-    "hp_loss_ratio": "[1e-2, 5e-3, 1e-3, 5e-4]"
+    "hp_neurons_min": 200,
+    "hp_neurons_max": 1000,
+    "hp_neurons_step": 50,
+    "hp_layers_min": 2,
+    "hp_layers_max": 4,
+    "hp_layers_step": 1,
+    "hp_initial_lr": [1e-3, 5e-4, 1e-4],
+    "hp_l2_penalty": [1e-3, 5e-4, 1e-4,5e-5],
+    "hp_loss_ratio": [1e-2, 5e-3, 1e-3, 5e-4]
   }
