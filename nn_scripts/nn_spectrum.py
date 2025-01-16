@@ -21,7 +21,7 @@ from pyNNsMD.utils.loss import r2_metric
 from pyNNsMD.models.hp import hpModelBuilder_energy_oscStr
 from pyNNsMD.esp_nn import precompute_feature_in_chunks, set_const_normalization_from_features, OutputSpec, get_limits
 
-############################
+############################ PARSE ARGUMENTS ##################################
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-g", "--gpuid", type=int)
@@ -30,14 +30,13 @@ ap.add_argument("-f", "--file")
 args = ap.parse_args()
 set_gpu([args.gpuid])          ###############  wichtig !!
 
-###########################   User section   #################################
+############################ CONFIG FILE ##################################
 
 # paths and output
 traindata = args.file
 outpath = os.getcwd() # Here stuff is written
 mod_outpath = join(outpath, "best_model") # for model, params, unused indices 
 hp_outpath = join(outpath, "outputtuner") # save tuner trials
-logfile = join(outpath, "logfile.txt") # writes all stdout into this file
 
 # training data and scenario
 lines_to_skip = 1 # number of lines to skip in the input file, not containing atom coordinates
@@ -89,28 +88,7 @@ plot_learning_curve = True # plot log(mse) vs. epochs
 # other
 clean_up_hpoutpath = True # delet hp_outpath before tuning (catch some errors 'oracle exited training' etc.)
 
-########################  End of User section  ################################
-
-# Logger so that output will be written to both terminal and stdout
-class Logger(object):
-    def __init__(self):
-        self.terminal = sys.stdout
-        self.log = open("logfile.log", "a")
-   
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)
-
-    def flush(self):
-        # this flush method is needed for python 3 compatibility.
-        pass
-sys.stdout = Logger()
-
-###########################  Start of Sript  ##################################
-
-##### 0. Constants and Definitions
-Ha2eV, A2Bohr = unit_conversions["EhtoeV"], unit_conversions["A2Bohr"]
-
+# Callbacks for training the model
 stop_early = ks.callbacks.EarlyStopping(monitor='val_loss', # which quantity to monitor
                                         patience=callback_patience, # how many epochs without improvement to tolerate
                                         restore_best_weights=True # reset weights to those of best model
@@ -126,6 +104,11 @@ lr_reduction = ks.callbacks.ReduceLROnPlateau(
     min_delta=0.0001,
     cooldown=0,
     min_lr=1e-6)
+
+############################ START OF SCRIPT ##################################
+
+##### 0. Constants and Definitions
+Ha2eV, A2Bohr = unit_conversions["EhtoeV"], unit_conversions["A2Bohr"]
 
 ##### 1. Data Preparation
 
@@ -358,9 +341,3 @@ hypers = [
 with open(os.path.join(mod_outpath, "params.txt"), "w") as outf:
     for k in hypers:
         outf.write(f"{k}\n")
-
-##### 9. Clean up
-# if delete_tunertrials:
-#     shutil.rmtree(hp_outpath) # = bash's rm -rf
-    
-
