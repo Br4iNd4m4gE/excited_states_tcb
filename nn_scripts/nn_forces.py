@@ -85,7 +85,6 @@ hp_dict   = {
 
 # Inputs
 inputfile = args.file
-n_atoms = extract_number_of_atoms(inputfile, lines_to_skip)
 
 # Constants and Initializations
 AtoBohr, HaB_to_eVA = unit_conversions["A2Bohr"], unit_conversions["HaB_to_eVA"]
@@ -102,7 +101,7 @@ stop_early = tf.keras.callbacks.EarlyStopping(
 
 ############################ START OF SCRIPT ##################################
 
-x, y, _, _ = load_data_excited_states_forces(inputfile, lines_to_skip)
+x, y, n_atoms, _ = load_data_excited_states_forces(inputfile, lines_to_skip)
 
 # Generate train and test sets
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)
