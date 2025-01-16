@@ -111,18 +111,27 @@ if args.save:
 ## Plot predictions vs true values
 # Energy
 plt.figure()
-plt.scatter(y[:, 0], prediction[:, 0], label="Total Energy")
+plt.hist2d(y[:, 0], prediction[:, 0], bins=100, cmin=1, cmap='inferno', label="Total Energy")
+plt.colorbar()
 plt.xlabel("True Total Energy [eV]")
 plt.ylabel("Predicted Total Energy [eV]")
 plt.title("Total Energy Predictions")
-plt.legend()
 plt.savefig("total_energy_predictions.png")
 
-# Forces
+# Forces cmin=1
 plt.figure()
-plt.scatter(forces_true, forces_pred, label="Forces")
+plt.hist2d(forces_true, forces_pred, bins=100, cmin=1, cmap='inferno', label="Forces")
+plt
 plt.xlabel("True Forces [eV/A]")
 plt.ylabel("Predicted Forces [eV/A]")
 plt.title("Forces Predictions")
-plt.legend()
-plt.savefig("forces_predictions.png")
+plt.savefig("forces_predictions_cmin1.png")
+
+# Forces cmin=50
+plt.figure()
+plt.hist2d(forces_true, forces_pred, bins=100, cmin=50, cmap='inferno', label="Forces")
+plt
+plt.xlabel("True Forces [eV/A]")
+plt.ylabel("Predicted Forces [eV/A]")
+plt.title("Forces Predictions")
+plt.savefig("forces_predictions_cmin50.png")
