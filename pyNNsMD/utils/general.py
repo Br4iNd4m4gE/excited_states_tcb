@@ -38,9 +38,27 @@ def shuffle_and_split(xyz, targets, ntrain):
     y = targets[shuffled_idx[:ntrain]]
 
     #separate coordinates from gradients
-    x = xyz[:,:,1:4]
-    grads = xyz[:,:,4:]
+    x = xyz[:, :, 1:4]
+    grads = xyz[:, :, 4:]
     return x, grads, y, shuffled_idx[ntrain:]
+
+def shuffle_and_split_train_test(xyz, targets, ntrain):
+    shuffled_idx = get_shuffled_indices(targets.shape[0])
+
+    # Split into training and test indices
+    train_idx = shuffled_idx[:ntrain]
+    test_idx = shuffled_idx[ntrain:]
+
+    # Separate coordinates from gradients
+    coords = xyz[:, :, 1:4]
+    esp_grads = xyz[:, :, 4:]
+
+    # Split into training and test sets
+    coords_train, coords_test = coords[train_idx], coords[test_idx]
+    esp_grads_train, esp_grads_test = esp_grads[train_idx], esp_grads[test_idx]
+    y_train, y_test = targets[train_idx], targets[test_idx]
+
+    return coords_train, esp_grads_train, y_train, coords_test, esp_grads_test, y_test
 
 def generate_invd_list(tgt, rep, natom):
     # decide if reduced (intermolecular) or full representation (couplings only):
@@ -53,7 +71,7 @@ def generate_invd_list(tgt, rep, natom):
     return invd_list
 
 def parse_single_file(file, n_atoms, cutoff=None, every_nth=1):
-    lines_per_geom = n_atoms+2
+    lines_per_geom = n_atoms + 2
 
     geom_data = []
     tgt_data = []
@@ -172,8 +190,9 @@ unit_conversions = {
 
 def load_data_excited_states_forces(inputfile, lines_to_skip):
 
-    AtoBohr = unit_conversions['A2Bohr']
+    A2Bohr = unit_conversions['A2Bohr']
 
+    # Get number of atoms
     n_atoms = extract_number_of_atoms(inputfile, lines_to_skip)
     linestotal = get_file_length(inputfile)
     ntotal = linestotal / (n_atoms + lines_to_skip + 1) # + 1 because of the empty line at the end of each geometry
@@ -192,7 +211,7 @@ def load_data_excited_states_forces(inputfile, lines_to_skip):
             for j in range(n_atoms):
                 line = data.readline()
                 line_split = [float(n) for n in line.split()[1:]]
-                coords = [AtoBohr * n for n in line_split[:3]]
+                coords = [A2Bohr * n for n in line_split[:3]]
                 coords.append(line_split[3])
                 comp_tmp.append(coords)
                 tmpy.extend(line_split[4:])
@@ -201,3 +220,22 @@ def load_data_excited_states_forces(inputfile, lines_to_skip):
             data.readline()
     
     return x, y, n_atoms, ntotal
+
+def load_data_excited_states_energies(inputfile, lines_to_skip):
+
+    A2Bohr = unit_conversions['A2Bohr']
+
+    # Get number of atoms
+    natoms = extract_number_of_atoms(inputfile, lines_to_skip)
+    linestotal = get_file_length(inputfile)
+    ntotal = linestotal / (natoms + lines_to_skip + 1)
+    if not ntotal.is_integer():
+        raise ValueError("Number of Lines incorrect.")
+
+    # Read in data
+    xyz_esp_data, energies = parse_single_file(inputfile, natoms) # energies and osc. str.
+
+    # Multiply coordinates by A2Bohr
+    xyz_esp_data[:, :, 1:4] *= A2Bohr
+
+    return xyz_esp_data, energies, natoms, ntotal

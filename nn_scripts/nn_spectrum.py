@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, r2_score
 
 sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, get_file_length, extract_number_of_atoms, unit_conversions
+from pyNNsMD.utils.general import shuffle_and_split_train_test, unit_conversions, load_data_excited_states_energies
 from pyNNsMD.nn_pes_src.device import set_gpu
 from pyNNsMD.utils.loss import r2_metric
 from pyNNsMD.models.hp import hpModelBuilder_energy_oscStr
@@ -33,25 +33,25 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 ############################ CONFIG FILE ##################################
 
 # paths and output
-traindata = args.file
+inputfile = args.file
 outpath = os.getcwd() # Here stuff is written
 mod_outpath = join(outpath, "best_model") # for model, params, unused indices 
 hp_outpath = join(outpath, "outputtuner") # save tuner trials
 
-# training data and scenario
-lines_to_skip = 1 # number of lines to skip in the input file, not containing atom coordinates
-natoms = extract_number_of_atoms(traindata, lines_to_skip)
-print(f"Number of atoms detected in the input file {traindata} is {natoms}")
 coords_to_atomic = True
 esp_in_traindata = True
-linestotal = get_file_length(traindata)
-ntotal = linestotal / (natoms + 2)
-if not ntotal.is_integer():
-    raise ValueError("Number of Lines incorrect.")
-ntotal = int(ntotal)
 trainPercentage = 0.9
-ntrain = int(ntotal * trainPercentage)
-ntest = ntotal - ntrain
+
+# training data and scenario
+lines_to_skip = 1 # number of lines to skip in the input file, not containing atom coordinates
+
+# natoms = extract_number_of_atoms(inputfile, lines_to_skip)
+# print(f"Number of atoms detected in the input file {inputfile} is {natoms}")
+# linestotal = get_file_length(inputfile)
+# ntotal = linestotal / (natoms + lines_to_skip + 1)
+# if not ntotal.is_integer():
+#     raise ValueError("Number of Lines incorrect.")
+# ntotal = int(ntotal)
 
 # all models 
 norm = "const" #  const normalizes geometries once over all data ; 'batch' in batchs
@@ -113,50 +113,38 @@ Ha2eV, A2Bohr = unit_conversions["EhtoeV"], unit_conversions["A2Bohr"]
 ############################ START OF SCRIPT ##################################
 
 # Load and preprocess data
-xyz_esp_data, energies = parse_single_file(traindata, natoms) # energies and osc. str.
-print(f"Number of Data points in the input file {traindata} is {len(xyz_esp_data)}")
+xyz_esp_data, energies, natoms, ntotal = load_data_excited_states_energies(inputfile, lines_to_skip) # energies and osc. str.
+print(f"Number of Data points in the input file {inputfile} is {len(xyz_esp_data)}")
 
-# Extract coordinates
-coords = xyz_esp_data[:, :, 1:4] # is (nrdata, 85, 3) or (nr, 170,3)
-if coords_to_atomic == True:
-    print("Converting coords to atomic units")
-    coords *= A2Bohr
-else:
-    print("Assuming coords are already in atomic units!")
-    
-# Check if dataset is large enough
-if len(xyz_esp_data) < (ntrain + ntest):
-    print("ERROR: Dataset (%i) is not large enough for the selected ntrain and ntest" %(len(xyz_esp_data)))
-    sys.exit()
-
-# Osc. Str. distribution
-plt.hist(energies[:, 1], bins=20)
-plt.savefig(join(outpath, "osc_distribution.png"), dpi=300)
+# Calculate number of training and test data points
+ntrain = int(ntotal * trainPercentage)
+ntest = ntotal - ntrain
 
 # Shuffle and split data
-x, esp_tmp, ene, unused = shuffle_and_split(xyz_esp_data, energies, ntrain)
+coords_train, esp_grads_train, y_train, coords_test, esp_grads_test, y_test = shuffle_and_split_train_test(xyz_esp_data, energies, ntrain)
+print(y_train.shape)
+# Scale testdata with mean and var from traindata
+testcoords=(coords[unused[:ntest]]-data["coords_mean"]) / (data["coords_var"]**0.5)
+# Extract ESP data
+esp_raw = xyz_esp_data[:, :, 4] # is (nrdata, 85)
 
 # Extract ESP data
-esp = esp_tmp[:, :, 0]
+esp_train = esp_grads_train[:, :, 0] # esp_tmp can include esp + esp_grads
 
-# Store train and test data in dictionary
-data = {"x": x, "esp": esp, "targets": ene}
-
-# Save histogram of energy and osc. str. distribution
-plt.hist(ene[:,1],bins=20)
-plt.savefig(join(outpath, "osc_distribution.png"), dpi=300)
+# Store train and test data
+data = {"coords": coords_train, "esp": esp_train, "energies": energies_train}
 
 # Scaling
 geoscaler = StandardScaler()
-data["x_mean"]   = geoscaler.fit(data["x"].reshape(-1, 1)).mean_
-data["x_var"]    = geoscaler.var_
-data["x_scaled"] = (data["x"] - data["x_mean"]) / (data["x_var"] ** 0.5)
+data["coords_mean"]   = geoscaler.fit(data["coords"].reshape(-1, 1)).mean_
+data["coords_var"]    = geoscaler.var_
+data["coords_scaled"] = (data["coords"] - data["coords_mean"]) / (data["coords_var"] ** 0.5)
 
 targetscaler = StandardScaler()
-data["targets_scaled"] = targetscaler.fit_transform(data["targets"].reshape(-1, 2))
-data["targets_mean"]   = targetscaler.mean_
-data["targets_var"]    = targetscaler.var_
-target                 = data["targets_scaled"]
+data["energies_scaled"] = targetscaler.fit_transform(data["energies"].reshape(-1, 2))
+data["energies_mean"]   = targetscaler.mean_
+data["energies_var"]    = targetscaler.var_
+target                 = data["energies_scaled"]
     
 # otput_spec with scaler being already fitted to energy -> Must come after scaler.fit
 output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
@@ -167,12 +155,12 @@ output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
 
 # Define x_train and y_train
 if esp_in_traindata:
-    x_train = [data["x_scaled"], data["esp"]]
-    y_train = data["targets_scaled"]
+    x_train = [data["coords_scaled"], data["esp"]]
+    y_train = data["energies_scaled"]
     callbacks = [stop_early, lr_reduction]
 else:
-    x_train = data["x_scaled"]
-    y_train = data["targets_scaled"]
+    x_train = data["coords_scaled"]
+    y_train = data["energies_scaled"]
     callbacks = [stop_early]
 
 
@@ -202,7 +190,7 @@ hp_model = tuner.hypermodel.build(best_hps)
 # pre-calculate geometries to fit the feat_std layers for normalizing inv.dists
 if norm == "const": # eigentlich immer oder?
     # precomputing features means (nrdata, 85, 3) -> (nrdata, 3570) 
-    feat_precomp = precompute_feature_in_chunks(data["x_scaled"], hp_model, batch_size=32)  # changed for test
+    feat_precomp = precompute_feature_in_chunks(data["coords_scaled"], hp_model, batch_size=32)  # changed for test
     # now the scaler of feat_std layer must be set. So weights and biases of this
     # layer must be so that x -> x-µ/std
     set_const_normalization_from_features(feat_precomp, hp_model)
@@ -219,10 +207,6 @@ hp_best_epoch = np.argmin(hp_hist.history["val_loss"])
 
 
 ##### 5. Prediction
-# Scale testdata with mean and var from traindata
-testcoords=(coords[unused[:ntest]]-data["x_mean"])/(data["x_var"]**0.5)
-# Extract ESP data
-esp_raw = xyz_esp_data[:, :, 4] # is (nrdata, 85)
 # Predictions
 if  esp_in_traindata:
     hp_pred = hp_model.predict([testcoords,esp_raw[unused[:ntest]]])

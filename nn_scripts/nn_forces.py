@@ -20,10 +20,8 @@ from sklearn.metrics import r2_score, mean_absolute_error
 from sklearn.model_selection import train_test_split
 
 sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, generate_invd_list, get_file_length, extract_number_of_atoms, unit_conversions, load_data_excited_states_forces
-from pyNNsMD.utils.loss import custom_loss_forces
+from pyNNsMD.utils.general import unit_conversions, load_data_excited_states_forces
 from pyNNsMD.nn_pes_src.device import set_gpu
-from pyNNsMD.layers.gradients import EnergyGradientLayer
 from pyNNsMD.layers.wrapper import WrapForcesModel
 from pyNNsMD.layers.normalize import NormalizationLayer
 from pyNNsMD.layers.inverse_distance import InverseDistance, FirstInverseDistance
@@ -101,6 +99,7 @@ stop_early = tf.keras.callbacks.EarlyStopping(
 
 ############################ START OF SCRIPT ##################################
 
+# Load data
 x, y, n_atoms, _ = load_data_excited_states_forces(inputfile, lines_to_skip)
 
 # Generate train and test sets
