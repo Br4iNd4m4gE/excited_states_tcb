@@ -44,7 +44,7 @@ config_file = args.conf
 config = read_json_config(config_file)
           
 fit_epochs    = int(config.get("fit_epochs", 2000))
-lines_to_skip = int(config.get("lines_to_skip", 1)) # number of comment lines to skip in the input file, not containing atom coordinates (empty lines do NOT count!)
+lines_to_skip = int(config.get("n_comment_lines", 1)) # number of comment lines to skip in the input file, not containing atom coordinates (empty lines do NOT count!)
 batch_size    = int(config.get("batch_size", 128))
 
 # Hyperparameter search inputs

@@ -6,6 +6,7 @@ import numpy as np
 import argparse
 from os.path import join, isdir, isfile, dirname, abspath
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import shutil 
 import tensorflow.keras as ks
 import matplotlib as mpl
@@ -37,63 +38,41 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 config_file = args.conf
 config = read_json_config(config_file)
 
-# paths and output
-inputfile = args.file
-outpath = os.getcwd() # Here stuff is written
-mod_outpath = join(outpath, "best_model") # for model, params, unused indices 
-hp_outpath = join(outpath, "outputtuner") # save tuner trials
+trainPercentage   = config.get("training_data_percentage", 0.9)
+lines_to_skip     = config.get("n_comment_lines", 1) # number of lines to skip in the input file, not containing atom coordinates (empty lines do NOT count!)
+loss_training     = config.get("training_loss_function", "mean_squared_error") # for trainig 
+dense_activ       = {'class_name': config.get("layer_activation_function", "leaky_softplus"), "config": {'alpha': config.get("config_alpha_layer_activation_function", 0.03)}} # for MLP
+final_activ       = config.get("final_activation_function", "linear") # activation function of the last layers of the MLPs 
+epochs            = int(config.get("epochs_best_model", 2000)) # for best_model
+callback_patience = int(config.get("callback_patience", 250)) # how many epoches without improvement are tolerated
 
-coords_to_atomic = True
-esp_in_traindata = True
-trainPercentage = 0.9
-
-# training data and scenario
-lines_to_skip = 1 # number of lines to skip in the input file, not containing atom coordinates
-
-# natoms = extract_number_of_atoms(inputfile, lines_to_skip)
-# print(f"Number of atoms detected in the input file {inputfile} is {natoms}")
-# linestotal = get_file_length(inputfile)
-# ntotal = linestotal / (natoms + lines_to_skip + 1)
-# if not ntotal.is_integer():
-#     raise ValueError("Number of Lines incorrect.")
-# ntotal = int(ntotal)
-
-# all models 
-norm = "const" #  const normalizes geometries once over all data ; 'batch' in batchs
-loss = "mean_squared_error" # for trainig 
-final_activ = "linear" # activation function of the last layers of the MLPs 
-dense_activ = {'class_name': "leaky_softplus", "config": {'alpha': 0.03}} # for MLP
-epochs = 2000 # for both models, needed for model.fit()
-callback_patience = 250 # how many epoches without improvement are tolerated
-
-# hyperparameter search
+# Hyperparameter search inputs
+hp_maxepochs = int(config.get("hp_epochs", 20)) # for tuner object 
+hp_factor    = int(config.get("hp_factor", 2)) # for tuner object
 hp_dict = {
-    "neurons_min":    20, # only hp-model
-    "neurons_max":    100, # only hp-model
-    "neurons_step":   5, # only hp-model
-    "layers_min":     2, # only hp-model
-    "layers_max":     8, # only hp-model
-    "layers_step":    1, # only hp-model
-    "regulizer":      "l2", # only hp-model
-    "learning_rates": [1e-3, 5e-4, 1e-4, 5e-5], # only hp-model
+    "neurons_min":    int(config.get("hp_neurons_min", 20)),
+    "neurons_max":    int(config.get("hp_neurons_max", 100)),
+    "neurons_step":   int(config.get("hp_neurons_step", 5)),
+    "layers_min":     int(config.get("hp_layers_min", 2)),
+    "layers_max":     int(config.get("hp_layers_max", 8)),
+    "layers_step":    int(config.get("hp_layers_step", 1)),
+    "regulizer":      config.get("hp_regulizer", "l2"),
+    "learning_rates": config.get("hp_learning_rates", [1e-3, 5e-4, 1e-4, 5e-5]),
 }
 
-hp_maxepochs = 20 # for tuner object 
-hp_factor    = 2 # for tuner object
-
-# original-esp model to compare to
-orig_neurons = 30 # neurons in mlp layer in orig-model
-orig_learning_rate = 1e-4 # learning rate of orig-model
-orig_layer_depth = 2 # depth of mlp layer for oig-model
-
-# plotting
-plot_scatters = True # plot predicted_energy(eV) vs. ref_energy (eV) 
-plot_learning_curve = True # plot log(mse) vs. epochs
-
-# other
-clean_up_hpoutpath = True # delet hp_outpath before tuning (catch some errors 'oracle exited training' etc.)
-
 ############################ PARAMETERS ##################################
+
+# Normalization of geometries
+norm = "const" #  const normalizes geometries once over all data ; 'batch' in batchs
+
+# Other (BUGFIX)
+clean_up_hpoutpath = True # delete hp_out_path before tuning (catch some errors 'oracle exited training' etc.)
+
+# Paths and output
+inputfile = args.file
+outpath = os.getcwd() # Working directory
+model_path = join(outpath, "best_model") # for model, params, unused indices 
+hp_out_path = join(outpath, "outputtuner") # save tuner trials
 
 # Callbacks for training the model
 stop_early = ks.callbacks.EarlyStopping(monitor='val_loss', # which quantity to monitor
@@ -117,12 +96,11 @@ EhtoeV, A2Bohr = unit_conversions["EhtoeV"], unit_conversions["A2Bohr"]
 
 ############################ START OF SCRIPT ##################################
 
+## 1. Data Preparation
+
 # Load and preprocess data
 xyz_esp_data, energies, natoms, ntotal = load_data_excited_states_energies(inputfile, lines_to_skip) # energies and osc. str.
 print(f"Number of Data points in the input file {inputfile} is {len(xyz_esp_data)}")
-
-# Calculate number of training and test data points
-# ntest = ntotal - ntrain
 
 # Shuffle and split data
 ntrain = int(ntotal * trainPercentage)
@@ -131,6 +109,10 @@ coords_train, esp_grads_train, targets_train, coords_test, esp_grads_test, targe
 # Extract ESP data
 esp_train = esp_grads_train[:, :, 0] # esp_tmp can include esp + esp_grads
 esp_test  = esp_grads_test[:, :, 0]
+
+# Check whether ESP data is included in the training data
+if esp_train.shape[1] == 0:
+    esp_in_traindata = False
 
 # Store train and test data
 data = {"coords": coords_train, "esp": esp_train, "targets": targets_train}
@@ -162,22 +144,25 @@ if esp_in_traindata:
     x_train = [data["coords_scaled"], data["esp"]]
     y_train = data["targets_scaled"]
     callbacks = [stop_early, lr_reduction]
+    y_test = [coords_test_rescaled, esp_test]
 else:
     x_train = data["coords_scaled"]
     y_train = data["targets_scaled"]
     callbacks = [stop_early]
+    y_test = coords_test_rescaled
 
 
-#### 2. Hyperparameter Search
+## 2. Hyperparameter Search
+
 if clean_up_hpoutpath: # removes directory which can be necessary
-    if os.path.isdir(hp_outpath): # this is needed if tuner quits with "INFO:tensorflow:Oracle triggered exit"
-        shutil.rmtree(hp_outpath) # = bash's rm -rf
+    if os.path.isdir(hp_out_path): # this is needed if tuner quits with "INFO:tensorflow:Oracle triggered exit"
+        shutil.rmtree(hp_out_path) # = bash's rm -rf
 
 # Initialize ModelBuilder
-model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss, r2_metric, norm)
+model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm)
 
 # Perform hyperparameter search
-best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_outpath)
+best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_out_path)
 
 # print("------------------------------------------")
 # print(f'''{best_hps.get("neurons")} neurons, {best_hps.get("layers")} layers, {best_hps.get("loss_ratio")} loss ratio, {best_hps.get("initial_lr")} initial learning rate and {best_hps.get("l2_penalty")} regulization penalty give the best results''')
@@ -187,7 +172,7 @@ best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs
 hp_model = tuner.hypermodel.build(best_hps)
 
 
-##### 4. Training
+## 3. Training best hp model
 
 # pre-calculate geometries to fit the feat_std layers for normalizing inv.dists
 if norm == "const": # eigentlich immer oder?
@@ -202,22 +187,20 @@ hp_hist = hp_model.fit(x_train, target, epochs=epochs,
                      validation_split=0.1, verbose=2, callbacks=callbacks)
 
 # Save model
-hp_model.save(mod_outpath)
+hp_model.save(model_path)
 
 # Get best epoch
 hp_best_epoch = np.argmin(hp_hist.history["val_loss"])
 
 
-##### 5. Prediction
-# Predictions
-if esp_in_traindata:
-    hp_pred = hp_model.predict([coords_test_rescaled, esp_test])
-elif not esp_in_traindata:
-    hp_pred = hp_model.predict(coords_test_rescaled)
-    
-##### 6. Evaluation
+## 4. Evaluation
+
+# Evaluate the model
+hp_pred = hp_model.predict(y_test)
+
 # scale the normalized prediction back to the natural scale of the data
 hp_pred_scaled = targetscaler.inverse_transform(hp_pred)
+
 # scale the references for the test data to the normalized scale for evaluation
 ref_scaled = targetscaler.transform(targets_test.reshape(-1,2))
 
@@ -226,10 +209,7 @@ energies_eV = targets_test[:, 0] * EhtoeV
 hp_pred_scaled_eV = hp_pred_scaled[:, 0] * EhtoeV
 
 # run keras model evaluation
-if esp_in_traindata:
-    hp_metrics = hp_model.evaluate([coords_test_rescaled, esp_test], ref_scaled)
-elif not esp_in_traindata:
-    hp_metrics = hp_model.evaluate(coords_test_rescaled, ref_scaled)
+hp_metrics = hp_model.evaluate(y_test, ref_scaled)
 
 # Output important metrics    
 print("\n\n", 22 * "-", "\n\t\tSummary\n", 22 * "-")
@@ -252,66 +232,59 @@ print("best val loss (atomic): ", hp_hist.history["val_loss"][hp_best_epoch])
 print("best val R2: ", hp_hist.history["val_r2_metric"][hp_best_epoch])
 
 
-##### 7. Write information to files
-# # save indices not used for training to file for later use in tests
-# np.savetxt(join(mod_outpath, "indices_for_testing_all.txt"), unused)
-# np.savetxt(join(mod_outpath, "indices_for_testing_testdata.txt"), unused[:ntest])
-
+# Save results
 #check distribution
 plt.hist(energies[:,1],bins=20)
 plt.savefig(join(outpath, "osc_distribution_last.png"), dpi=300)
 
 # save energies to plot scatters
-np.savetxt(join(mod_outpath, 'hp_ref_energies_eV.dat'), energies_eV)
-np.savetxt(join(mod_outpath, 'hp_ref_osc.dat'), targets_train[:, 1])
-np.savetxt(join(mod_outpath, 'hp_predicted_energies_eV.dat'), hp_pred_scaled_eV)
-np.savetxt(join(mod_outpath, 'hp_predicted_osc.dat'), hp_pred_scaled[:,1])
+np.savetxt(join(model_path, 'hp_ref_energies_eV.dat'), energies_eV)
+np.savetxt(join(model_path, 'hp_ref_osc.dat'), targets_train[:, 1])
+np.savetxt(join(model_path, 'hp_predicted_energies_eV.dat'), hp_pred_scaled_eV)
+np.savetxt(join(model_path, 'hp_predicted_osc.dat'), hp_pred_scaled[:,1])
     
-##### 8. Plotting
+## 5. Plotting
 # Plot training progress
-if plot_learning_curve:
-    f, ax = plt.subplots(1, figsize=(6,6))
-    ax.plot(np.arange(len(hp_hist.history["loss"])), hp_hist.history["loss"], label="training loss")
-    ax.plot(np.arange(len(hp_hist.history["loss"])), hp_hist.history["val_loss"], label="validation loss")
-    ax.set_yscale("log")
-    ax.set_ylabel("log(MSE)")
-    ax.set_xlabel("epochs")
-    ax.plot(hp_best_epoch, hp_hist.history["val_loss"][hp_best_epoch], ls="", marker="x", ms=10, c="black", label="best model")
-    ax.axvline(x=hp_best_epoch, color="gray", ls="--")
-    ax.axhline(y=hp_hist.history["val_loss"][hp_best_epoch], color="gray", ls="--")
-    ax.legend()
-    f.savefig(join(mod_outpath, "test-loss.png"), dpi=300)
+f, ax = plt.subplots(1, figsize=(6,6))
+ax.plot(np.arange(len(hp_hist.history["loss"])), hp_hist.history["loss"], label="training loss")
+ax.plot(np.arange(len(hp_hist.history["loss"])), hp_hist.history["val_loss"], label="validation loss")
+ax.set_yscale("log")
+ax.set_ylabel("log(MSE)")
+ax.set_xlabel("epochs")
+ax.plot(hp_best_epoch, hp_hist.history["val_loss"][hp_best_epoch], ls="", marker="x", ms=10, c="black", label="best model")
+ax.axvline(x=hp_best_epoch, color="gray", ls="--")
+ax.axhline(y=hp_hist.history["val_loss"][hp_best_epoch], color="gray", ls="--")
+ax.legend()
+f.savefig(join(model_path, "test-loss.png"), dpi=300)
         
 # Plot Scatter
-if plot_scatters:
-    import matplotlib.colors as mcolors
-    fig, ax = plt.subplots(1, figsize=(6,6))
-    ax.hist2d(energies_eV, hp_pred_scaled_eV.flatten(),
-                  bins=1000, # Just for Tests; Mila wrote 1000
-                  cmin=1, # Just for Tests; Mila wrote 1 
-                  norm=mcolors.PowerNorm(0.5))
-    b,t = get_limits([energies_eV, hp_pred_scaled_eV])
-    ax.set_xlabel("reference (eV)")
-    ax.set_ylabel("prediction (eV)")
-    ax.set_aspect("equal")
-    ax.set_ylim((b,t))
-    opti_ref = np.linspace(b,t,num=10)
-    ax.plot(opti_ref, opti_ref, c="C1")
-    fig.savefig(join(mod_outpath, "scatter.png"), dpi=300)
-    plt.clf()
-    fig, ax = plt.subplots(1, figsize=(6,6))
-    ax.hist2d(targets_test[:, 1], hp_pred_scaled[:, 1],
-                  bins=1000, # Just for Tests; Mila wrote 1000
-                  cmin=1, # Just for Tests; Mila wrote 1 
-                  norm=mcolors.PowerNorm(0.5))
-    b, t = get_limits([targets_test[:, 1], hp_pred_scaled[:, 1]])
-    ax.set_xlabel("reference")
-    ax.set_ylabel("prediction")
-    ax.set_aspect("equal")
-    ax.set_ylim((b, t))
-    opti_ref = np.linspace(b, t, num=10)
-    ax.plot(opti_ref, opti_ref, c="C1")
-    fig.savefig(join(mod_outpath, "scatter_osc.png"), dpi=300)
+fig, ax = plt.subplots(1, figsize=(6,6))
+ax.hist2d(energies_eV, hp_pred_scaled_eV.flatten(),
+                bins=1000, # Just for Tests; Mila wrote 1000
+                cmin=1, # Just for Tests; Mila wrote 1 
+                norm=mcolors.PowerNorm(0.5))
+b,t = get_limits([energies_eV, hp_pred_scaled_eV])
+ax.set_xlabel("reference (eV)")
+ax.set_ylabel("prediction (eV)")
+ax.set_aspect("equal")
+ax.set_ylim((b,t))
+opti_ref = np.linspace(b,t,num=10)
+ax.plot(opti_ref, opti_ref, c="C1")
+fig.savefig(join(model_path, "scatter.png"), dpi=300)
+plt.clf()
+fig, ax = plt.subplots(1, figsize=(6,6))
+ax.hist2d(targets_test[:, 1], hp_pred_scaled[:, 1],
+                bins=1000, # Just for Tests; Mila wrote 1000
+                cmin=1, # Just for Tests; Mila wrote 1 
+                norm=mcolors.PowerNorm(0.5))
+b, t = get_limits([targets_test[:, 1], hp_pred_scaled[:, 1]])
+ax.set_xlabel("reference")
+ax.set_ylabel("prediction")
+ax.set_aspect("equal")
+ax.set_ylim((b, t))
+opti_ref = np.linspace(b, t, num=10)
+ax.plot(opti_ref, opti_ref, c="C1")
+fig.savefig(join(model_path, "scatter_osc.png"), dpi=300)
 
 # save scaling parameters to GROMACS-readable format
 hypers = [
@@ -325,6 +298,6 @@ hypers = [
     
     ]
 
-with open(os.path.join(mod_outpath, "params.txt"), "w") as outf:
+with open(os.path.join(outpath, "params.txt"), "w") as outf:
     for k in hypers:
         outf.write(f"{k}\n")
