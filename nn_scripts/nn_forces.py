@@ -85,26 +85,7 @@ hp_dict   = {
 
 #Inputs
 inputfile = args.file
-# lines_to_skip = 1 # number of lines to skip in the input file, not containing atom coordinates
 n_atoms = extract_number_of_atoms(inputfile, lines_to_skip)
-
-# fit_epochs = 2000
-# batch_size = 128
-
-##Hyperband Search Inputs
-# hp_epochs = 300
-# hp_factor = 18
-# hp_dict = {
-# 	"neurons_min":	200,
-# 	"neurons_max":	1000,
-# 	"neurons_step":	50,
-# 	"layers_min":	2,
-# 	"layers_max":	4,
-# 	"layers_step":	1,
-# 	"initial_lr":	[1e-3, 5e-4, 1e-4],
-# 	"l2_penalty":	[1e-3, 5e-4, 1e-4,5e-5],
-# 	"loss_ratio":	[1e-2, 5e-3, 1e-3, 5e-4]	#loss = loss_forces + loss_ratio*loss_energy
-# }
 
 #Constants and Initializations
 AtoBohr, HaB_to_eVA = unit_conversions["A2Bohr"], unit_conversions["HaB_to_eVA"]

@@ -91,7 +91,7 @@ hp_factor = 2 # for tuner object
 
 # original-esp model to compare to
 create_origmodel = True # one model without HP search is trained and compared
-origmod_outpath=join(outpath, "orig_best_model") # for model, params, unused indices 
+origmod_outpath = join(outpath, "orig_best_model") # for model, params, unused indices 
 orig_neurons = 30 # neurons in mlp layer in orig-model
 orig_learning_rate = 1e-4 # learning rate of orig-model
 orig_layer_depth = 2 # depth of mlp layer for oig-model
@@ -336,7 +336,7 @@ plt.savefig(join(outpath, "osc_distribution.png"), dpi=300)
 coords = xyz_data[:, :, 1:4] # is (nrdata, 85, 3) or (nr, 170,3)
 if coords_to_atomic == True:
     print("Converting coords to atomic units")
-    coords *=A2Bohr
+    coords *= A2Bohr
 else:
     print("Assuming coords are already in atomic units!")
 
