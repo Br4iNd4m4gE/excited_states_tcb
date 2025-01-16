@@ -108,7 +108,7 @@ lr_reduction = ks.callbacks.ReduceLROnPlateau(
     min_lr=1e-6)
 
 # Constants
-Ha2eV, A2Bohr = unit_conversions["EhtoeV"], unit_conversions["A2Bohr"]
+EhtoeV, A2Bohr = unit_conversions["EhtoeV"], unit_conversions["A2Bohr"]
 
 ############################ START OF SCRIPT ##################################
 
@@ -121,30 +121,29 @@ ntrain = int(ntotal * trainPercentage)
 ntest = ntotal - ntrain
 
 # Shuffle and split data
-coords_train, esp_grads_train, y_train, coords_test, esp_grads_test, y_test = shuffle_and_split_train_test(xyz_esp_data, energies, ntrain)
-print(y_train.shape)
-# Scale testdata with mean and var from traindata
-testcoords=(coords[unused[:ntest]]-data["coords_mean"]) / (data["coords_var"]**0.5)
-# Extract ESP data
-esp_raw = xyz_esp_data[:, :, 4] # is (nrdata, 85)
+coords_train, esp_grads_train, targets_train, coords_test, esp_grads_test, targets_test = shuffle_and_split_train_test(xyz_esp_data, energies, ntrain)
 
 # Extract ESP data
 esp_train = esp_grads_train[:, :, 0] # esp_tmp can include esp + esp_grads
+esp_test  = esp_grads_test[:, :, 0]
 
 # Store train and test data
-data = {"coords": coords_train, "esp": esp_train, "energies": energies_train}
+data = {"coords": coords_train, "esp": esp_train, "targets": targets_train}
 
 # Scaling
-geoscaler = StandardScaler()
-data["coords_mean"]   = geoscaler.fit(data["coords"].reshape(-1, 1)).mean_
-data["coords_var"]    = geoscaler.var_
+geomscaler = StandardScaler()
+data["coords_mean"]   = geomscaler.fit(data["coords"].reshape(-1, 1)).mean_
+data["coords_var"]    = geomscaler.var_
 data["coords_scaled"] = (data["coords"] - data["coords_mean"]) / (data["coords_var"] ** 0.5)
 
 targetscaler = StandardScaler()
-data["energies_scaled"] = targetscaler.fit_transform(data["energies"].reshape(-1, 2))
-data["energies_mean"]   = targetscaler.mean_
-data["energies_var"]    = targetscaler.var_
-target                 = data["energies_scaled"]
+data["targets_scaled"] = targetscaler.fit_transform(data["targets"].reshape(-1, 2))
+data["targets_mean"]   = targetscaler.mean_
+data["targets_var"]    = targetscaler.var_
+target                 = data["targets_scaled"]
+
+# Scale testdata with mean and var from traindata
+coords_test_rescaled = (coords_test - data["coords_mean"]) / (data["coords_var"] ** 0.5)
     
 # otput_spec with scaler being already fitted to energy -> Must come after scaler.fit
 output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
@@ -156,11 +155,11 @@ output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
 # Define x_train and y_train
 if esp_in_traindata:
     x_train = [data["coords_scaled"], data["esp"]]
-    y_train = data["energies_scaled"]
+    y_train = data["targets_scaled"]
     callbacks = [stop_early, lr_reduction]
 else:
     x_train = data["coords_scaled"]
-    y_train = data["energies_scaled"]
+    y_train = data["targets_scaled"]
     callbacks = [stop_early]
 
 
@@ -184,8 +183,6 @@ hp_model = tuner.hypermodel.build(best_hps)
 
 
 ##### 4. Training
-# Train the Model: First, calculate the representations for all training 
-# data points to set scalers to mean and std. Then fit.
 
 # pre-calculate geometries to fit the feat_std layers for normalizing inv.dists
 if norm == "const": # eigentlich immer oder?
@@ -208,34 +205,34 @@ hp_best_epoch = np.argmin(hp_hist.history["val_loss"])
 
 ##### 5. Prediction
 # Predictions
-if  esp_in_traindata:
-    hp_pred = hp_model.predict([testcoords,esp_raw[unused[:ntest]]])
+if esp_in_traindata:
+    hp_pred = hp_model.predict([coords_test_rescaled, esp_test])
 elif not esp_in_traindata:
-    hp_pred = hp_model.predict(testcoords)
+    hp_pred = hp_model.predict(coords_test_rescaled)
     
 ##### 6. Evaluation
 # scale the normalized prediction back to the natural scale of the data
 hp_pred_scaled = targetscaler.inverse_transform(hp_pred)
 # scale the references for the test data to the normalized scale for evaluation
-ref_scaled = targetscaler.transform(energies[unused[:ntest]].reshape(-1,2))
+ref_scaled = targetscaler.transform(targets_test.reshape(-1,2))
 
 # get rescaled predictions in eV
-energies_eV=energies[unused[:ntest],0]*27.2114
-hp_pred_scaled_eV=hp_pred_scaled[:,0]*27.2114
+energies_eV = targets_test[:, 0] * EhtoeV
+hp_pred_scaled_eV = hp_pred_scaled[:, 0] * EhtoeV
 
 # run keras model evaluation
 if esp_in_traindata:
-    hp_metrics = hp_model.evaluate([testcoords, esp_raw[unused[:ntest]]], ref_scaled)
+    hp_metrics = hp_model.evaluate([coords_test_rescaled, esp_test], ref_scaled)
 elif not esp_in_traindata:
-    hp_metrics = hp_model.evaluate(testcoords, ref_scaled)
+    hp_metrics = hp_model.evaluate(coords_test_rescaled, ref_scaled)
 
 # Output important metrics    
 print("\n\n", 22 * "-", "\n\t\tSummary\n", 22 * "-")
 print("\n\tHP search lead to:\n", best_hps.get_config()["values"])
 
 print("\n\tPerformance of HP model:")
-test_mae_eV = mean_absolute_error(energies_eV,hp_pred_scaled_eV)
-test_mae_osc = mean_absolute_error(energies[unused[:ntest],1],hp_pred_scaled[:,1])
+test_mae_eV = mean_absolute_error(energies_eV, hp_pred_scaled_eV)
+test_mae_osc = mean_absolute_error(targets_test[:, 1], hp_pred_scaled[:, 1])
 print("test loss: ", hp_metrics[0])
 print("test MAE (eV): ", test_mae_eV)
 print("test MAE osc: ", test_mae_osc)
@@ -251,9 +248,9 @@ print("best val R2: ", hp_hist.history["val_r2_metric"][hp_best_epoch])
 
 
 ##### 7. Write information to files
-# save indices not used for training to file for later use in tests
-np.savetxt(join(mod_outpath, "indices_for_testing_all.txt"), unused)
-np.savetxt(join(mod_outpath, "indices_for_testing_testdata.txt"), unused[:ntest])
+# # save indices not used for training to file for later use in tests
+# np.savetxt(join(mod_outpath, "indices_for_testing_all.txt"), unused)
+# np.savetxt(join(mod_outpath, "indices_for_testing_testdata.txt"), unused[:ntest])
 
 #check distribution
 plt.hist(energies[:,1],bins=20)
@@ -261,7 +258,7 @@ plt.savefig(join(outpath, "osc_distribution_last.png"), dpi=300)
 
 # save energies to plot scatters
 np.savetxt(join(mod_outpath, 'hp_ref_energies_eV.dat'), energies_eV)
-np.savetxt(join(mod_outpath, 'hp_ref_osc.dat'), energies[unused[:ntest],1])
+np.savetxt(join(mod_outpath, 'hp_ref_osc.dat'), targets_train[:, 1])
 np.savetxt(join(mod_outpath, 'hp_predicted_energies_eV.dat'), hp_pred_scaled_eV)
 np.savetxt(join(mod_outpath, 'hp_predicted_osc.dat'), hp_pred_scaled[:,1])
     
@@ -298,30 +295,31 @@ if plot_scatters:
     fig.savefig(join(mod_outpath, "scatter.png"), dpi=300)
     plt.clf()
     fig, ax = plt.subplots(1, figsize=(6,6))
-    ax.hist2d(energies[unused[:ntest],1], hp_pred_scaled[:,1],
+    ax.hist2d(targets_train[:, 1], hp_pred_scaled[:, 1],
                   bins=1000, # Just for Tests; Mila wrote 1000
                   cmin=1, # Just for Tests; Mila wrote 1 
                   norm=mcolors.PowerNorm(0.5))
-    b, t = get_limits([energies[unused[:ntest],1], hp_pred_scaled[:,1]])
+    b, t = get_limits([targets_train[:, 1], hp_pred_scaled[:, 1]])
     ax.set_xlabel("reference")
     ax.set_ylabel("prediction")
     ax.set_aspect("equal")
-    ax.set_ylim((b,t))
-    opti_ref = np.linspace(b,t,num=10)
+    ax.set_ylim((b, t))
+    opti_ref = np.linspace(b, t, num=10)
     ax.plot(opti_ref, opti_ref, c="C1")
     fig.savefig(join(mod_outpath, "scatter_osc.png"), dpi=300)
 
 # save scaling parameters to GROMACS-readable format
 hypers = [
-    data["x_mean"][0], 
-    (data["x_var"]**0.5)[0], 
+    data["coords_mean"][0], 
+    (data["coords_var"] ** 0.5)[0], 
     data["targets_mean"][0], 
-    (data["targets_var"]**0.5)[0], 
+    (data["targets_var"] ** 0.5)[0], 
     data["targets_mean"][1], 
-    (data["targets_var"]**0.5)[1],
+    (data["targets_var"] ** 0.5)[1],
     (0,0) # no gradients
     
     ]
+
 with open(os.path.join(mod_outpath, "params.txt"), "w") as outf:
     for k in hypers:
         outf.write(f"{k}\n")
