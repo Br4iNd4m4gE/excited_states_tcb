@@ -38,13 +38,13 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 config_file = args.conf
 config = read_json_config(config_file)
 
-trainPercentage   = config.get("training_data_percentage", 0.9)
-lines_to_skip     = config.get("n_comment_lines", 1) # number of lines to skip in the input file, not containing atom coordinates (empty lines do NOT count!)
-loss_training     = config.get("training_loss_function", "mean_squared_error") # for trainig 
-dense_activ       = {'class_name': config.get("layer_activation_function", "leaky_softplus"), "config": {'alpha': config.get("config_alpha_layer_activation_function", 0.03)}} # for MLP
-final_activ       = config.get("final_activation_function", "linear") # activation function of the last layers of the MLPs 
+trainPercentage   = np.float64(config.get("training_data_percentage", 0.9))
+lines_to_skip     = int(config.get("n_comment_lines", 1)) # number of lines to skip in the input file, not containing atom coordinates (empty lines do NOT count!)
 epochs            = int(config.get("epochs_best_model", 2000)) # for best_model
 callback_patience = int(config.get("callback_patience", 250)) # how many epoches without improvement are tolerated
+dense_activ       = {'class_name': config.get("layer_activation_function", "leaky_softplus"), "config": {'alpha': np.float64(config.get("config_alpha_layer_activation_function", 0.03))}} # for MLP
+final_activ       = config.get("final_activation_function", "linear") # activation function of the last layers of the MLPs 
+loss_training     = config.get("training_loss_function", "mean_squared_error") # for trainig 
 
 # Hyperparameter search inputs
 hp_maxepochs = int(config.get("hp_epochs", 20)) # for tuner object 
