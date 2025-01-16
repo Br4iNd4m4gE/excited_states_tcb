@@ -345,7 +345,7 @@ def build_model(subnets,
 
     # make a model out of it all
     model = ks.Model(inputs=inputs, outputs=outputs)
-    opti = ks.optimizers.Adam(lr=learning_rate)
+    opti = ks.optimizers.Adam(learning_rate=learning_rate)
 
     # final model configuration
     model.compile(optimizer=opti, 
