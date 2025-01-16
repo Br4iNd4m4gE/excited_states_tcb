@@ -81,7 +81,7 @@ hp_dict   = {
 	"loss_ratio":   config.get("hp_loss_ratio", [1e-2, 5e-3, 1e-3, 5e-4])
 }
 
-############################ START OF SCRIPT ##################################
+############################ PARAMETERS ##################################
 
 # Inputs
 inputfile = args.file
@@ -100,9 +100,9 @@ stop_early = tf.keras.callbacks.EarlyStopping(
     restore_best_weights = True
 )
 
-###########################  Start of Script  ##################################
+############################ START OF SCRIPT ##################################
 
-x, y = load_data_excited_states_forces(inputfile, lines_to_skip)
+x, y, _, _ = load_data_excited_states_forces(inputfile, lines_to_skip)
 
 # Generate train and test sets
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)

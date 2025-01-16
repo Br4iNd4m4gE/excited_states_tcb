@@ -200,4 +200,4 @@ def load_data_excited_states_forces(inputfile, lines_to_skip):
             y.append(tmpy)
             data.readline()
     
-    return x, y
+    return x, y, n_atoms, ntotal
