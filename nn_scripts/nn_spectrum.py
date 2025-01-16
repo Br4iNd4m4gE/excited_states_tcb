@@ -6,27 +6,20 @@ import numpy as np
 import argparse
 from os.path import join, isdir, isfile, dirname, abspath
 import matplotlib.pyplot as plt
+import shutil 
+import tensorflow.keras as ks
 import matplotlib as mpl
 mpl.use('Agg')
 
-import tensorflow.keras as ks
-import keras_tuner as kt
 from sklearn.preprocessing import StandardScaler
-sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, generate_invd_list, get_file_length, extract_number_of_atoms, unit_conversions
-from pyNNsMD.nn_pes_src.device import set_gpu
-from pyNNsMD.utils.loss import r2_metric
-from pyNNsMD.layers.mlp import MLP
-from pyNNsMD.layers.features import FeatureGeometric
-from pyNNsMD.layers.normalize import ConstLayerNormalization
-from pyNNsMD.models.hp import hpModelBuilder_energy_oscStr
-
-from pyNNsMD.esp_nn import precompute_feature_in_chunks, set_const_normalization_from_features
-from pyNNsMD.esp_nn import OutputSpec, SubNet, build_model, get_limits
-from pyNNsMD.esp_nn import build_geom_preprocess_layer, ScaledMeanAbsoluteError
 from sklearn.metrics import mean_absolute_error, r2_score
 
-import subprocess
+sys.path.append(abspath(join(dirname(__file__), "..")))
+from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, get_file_length, extract_number_of_atoms, unit_conversions
+from pyNNsMD.nn_pes_src.device import set_gpu
+from pyNNsMD.utils.loss import r2_metric
+from pyNNsMD.models.hp import hpModelBuilder_energy_oscStr
+from pyNNsMD.esp_nn import precompute_feature_in_chunks, set_const_normalization_from_features, OutputSpec, get_limits
 
 ############################
 
@@ -42,8 +35,8 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 # paths and output
 traindata = args.file
 outpath = os.getcwd() # Here stuff is written
-mod_outpath=join(outpath, "best_model") # for model, params, unused indices 
-hp_outpath=join(outpath, "outputtuner") # save tuner trials
+mod_outpath = join(outpath, "best_model") # for model, params, unused indices 
+hp_outpath = join(outpath, "outputtuner") # save tuner trials
 logfile = join(outpath, "logfile.txt") # writes all stdout into this file
 
 # training data and scenario
@@ -134,6 +127,7 @@ lr_reduction = ks.callbacks.ReduceLROnPlateau(
     cooldown=0,
     min_lr=1e-6)
 
+##### 1. Data Preparation
 
 # Load and preprocess data
 xyz_esp_data, energies = parse_single_file(traindata, natoms) # energies and osc. str.
@@ -162,23 +156,19 @@ x, esp_tmp, ene, unused = shuffle_and_split(xyz_esp_data, energies, ntrain)
 # Extract ESP data
 esp = esp_tmp[:, :, 0]
 
-# store train and test data in dictionary
-data = {"x": x, "esp": esp}
+# Store train and test data in dictionary
+data = {"x": x, "esp": esp, "targets": ene}
 
-# append dictionaries with energy
-data["targets"] = ene
-
-#check distribution
+# Save histogram of energy and osc. str. distribution
 plt.hist(ene[:,1],bins=20)
 plt.savefig(join(outpath, "osc_distribution.png"), dpi=300)
 
-## scaling
+# Scaling
 geoscaler = StandardScaler()
 data["x_mean"]   = geoscaler.fit(data["x"].reshape(-1, 1)).mean_
 data["x_var"]    = geoscaler.var_
 data["x_scaled"] = (data["x"] - data["x_mean"]) / (data["x_var"] ** 0.5)
 
-# same with energy
 targetscaler = StandardScaler()
 data["targets_scaled"] = targetscaler.fit_transform(data["targets"].reshape(-1, 2))
 data["targets_mean"]   = targetscaler.mean_
@@ -192,24 +182,20 @@ output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
                                 )                                                
 }
 
-if esp_in_traindata:
-    callbacks = [stop_early, lr_reduction]
-else:
-    callbacks = [stop_early]
-
-# x and y data
+# Define x_train and y_train
 if esp_in_traindata:
     x_train = [data["x_scaled"], data["esp"]]
     y_train = data["targets_scaled"]
+    callbacks = [stop_early, lr_reduction]
 else:
     x_train = data["x_scaled"]
     y_train = data["targets_scaled"]
+    callbacks = [stop_early]
 
-## 2. Hyperparameter Search
-# this is needed if tuner quits with "INFO:tensorflow:Oracle triggered exit"
-if clean_up_hpoutpath: # removes directory which can be necessary 
-    import shutil 
-    if os.path.isdir(hp_outpath):
+
+#### 2. Hyperparameter Search
+if clean_up_hpoutpath: # removes directory which can be necessary
+    if os.path.isdir(hp_outpath): # this is needed if tuner quits with "INFO:tensorflow:Oracle triggered exit"
         shutil.rmtree(hp_outpath) # = bash's rm -rf
 
 # Initialize ModelBuilder
