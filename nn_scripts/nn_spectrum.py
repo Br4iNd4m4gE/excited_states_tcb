@@ -82,11 +82,10 @@ hp_dict = {
     "learning_rates": [1e-3, 5e-4, 1e-4, 5e-5], # only hp-model
 }
 
-hp_maxepochs =   20 # for tuner object 
-hp_factor  =    2 # for tuner object
+hp_maxepochs = 20 # for tuner object 
+hp_factor    = 2 # for tuner object
 
 # original-esp model to compare to
-origmod_outpath = join(outpath, "orig_best_model") # for model, params, unused indices 
 orig_neurons = 30 # neurons in mlp layer in orig-model
 orig_learning_rate = 1e-4 # learning rate of orig-model
 orig_layer_depth = 2 # depth of mlp layer for oig-model
@@ -108,12 +107,12 @@ class Logger(object):
    
     def write(self, message):
         self.terminal.write(message)
-        self.log.write(message)  
+        self.log.write(message)
 
     def flush(self):
         # this flush method is needed for python 3 compatibility.
-        pass  
-sys.stdout=Logger()
+        pass
+sys.stdout = Logger()
 
 ###########################  Start of Sript  ##################################
 
