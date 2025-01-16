@@ -178,7 +178,6 @@ hp_model = tuner.hypermodel.build(best_hps)
 
 # pre-calculate geometries to fit the feat_std layers for normalizing inv.dists
 if norm == "const": # eigentlich immer oder?
-    # precomputing features means (nrdata, 85, 3) -> (nrdata, 3570) 
     feat_precomp = precompute_feature_in_chunks(data["coords_scaled"], hp_model, batch_size=32)  # changed for test
     # now the scaler of feat_std layer must be set. So weights and biases of this
     # layer must be so that x -> x-µ/std
@@ -200,13 +199,13 @@ hp_best_epoch = np.argmin(hp_hist.history["val_loss"])
 # Evaluate the model
 hp_pred = hp_model.predict(y_test)
 
-# scale the normalized prediction back to the natural scale of the data
+# Scale the normalized prediction back to the natural scale of the data
 hp_pred_scaled = targetscaler.inverse_transform(hp_pred)
 
-# scale the references for the test data to the normalized scale for evaluation
+# Scale the references for the test data to the normalized scale for evaluation
 ref_scaled = targetscaler.transform(targets_test.reshape(-1,2))
 
-# get rescaled predictions in eV
+# Get rescaled predictions in eV
 energies_eV = targets_test[:, 0] * EhtoeV
 hp_pred_scaled_eV = hp_pred_scaled[:, 0] * EhtoeV
 
@@ -233,18 +232,17 @@ print("---")
 print("best val loss (atomic): ", hp_hist.history["val_loss"][hp_best_epoch])
 print("best val R2: ", hp_hist.history["val_r2_metric"][hp_best_epoch])
 
-
 # Save results
-#check distribution
 plt.hist(energies[:,1],bins=20)
 plt.savefig(join(outpath, "osc_distribution_last.png"), dpi=300)
 
-# save energies to plot scatters
+# Save energies to plot scatters
 np.savetxt(join(model_path, 'hp_ref_energies_eV.dat'), energies_eV)
 np.savetxt(join(model_path, 'hp_ref_osc.dat'), targets_train[:, 1])
 np.savetxt(join(model_path, 'hp_predicted_energies_eV.dat'), hp_pred_scaled_eV)
 np.savetxt(join(model_path, 'hp_predicted_osc.dat'), hp_pred_scaled[:,1])
-    
+
+
 ## 5. Plotting
 # Plot training progress
 f, ax = plt.subplots(1, figsize=(6,6))
