@@ -45,3 +45,4 @@ class hpModelBuilder:
         tuner.search(x_train, y_train_scaled, batch_size=batch_size, epochs=hp_epochs, callbacks=[stop_early], verbose=2, validation_split=0.2)
         best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
         return best_hps, tuner
+

@@ -106,17 +106,22 @@ def hp_simple_model_site(hp):
     verion of esp_nn.py/build_model() with hyperparameters. Therefore, the
     main architecture is fixed. You may vary number of neurons in MLP layer,
     the depth, the l1 or l2 regularization and the learning rate for now."""
+
     # 0. create interatomic distance matrix
     geom_idx = [(i,j) for i,j in combinations(range(natoms), 2)] #len=3570
     interatomic_dists = np.array(geom_idx) # this is [ [0,1],[0,2],...,[83,84] ]
+
     # 1. Geom in and Geom Prep (later already has feat_std)
     geom_in, geom_prep = build_geom_preprocess_layer(natoms, 
                                                      interatomic_dists, 
                                                      norm=norm)
+    
     # 2. Esp_in 
     esp_in = ks.Input(shape=(natoms,), dtype='float32', name='esp_input')
+
     # 3. Concat
     rep = ks.layers.Concatenate(name="concat_layer")([geom_prep, esp_in])
+
     # 4. MLP with HP search
     neurons = hp.Int("nn_size", neurons_min, neurons_max, neurons_step)
     hp_layer_depth = hp.Int("depth", layers_min, layers_max, layers_step)
@@ -129,15 +134,18 @@ def hp_simple_model_site(hp):
               dense_activ_last=dense_activ,
               dense_kernel_regularizer=hp_regularizer,
               name="monolith")
+    
     # 5. Output
     res = mlp(rep)
     final_layer = ks.layers.Dense(2, 
                     activation=final_activ, 
                     use_bias=True, 
                     name="out_vom_mlp")(res)
+    
     # summary 
     inputs_list = [geom_in, esp_in]
     outputs_list = [final_layer]
+
     # make a model out of it all
     model = ks.Model(inputs=inputs_list, outputs=outputs_list)
     hp_learning_rate = hp.Choice("learning_rate", values=learning_rates)
@@ -183,7 +191,7 @@ def hp_simple_model_site_noesp(hp):
     # 4. MLP with HP search
     neurons = hp.Int("nn_size", neurons_min, neurons_max, neurons_step)
     hp_layer_depth = hp.Int("depth", layers_min, layers_max, layers_step)
-    hp_regularizer = hp.Choice("use_reg_weight", values=regulizers)
+    hp_regularizer = regulizer
     mlp = MLP(dense_units=neurons, 
               dense_depth=hp_layer_depth, 
               dense_activ=dense_activ, 
