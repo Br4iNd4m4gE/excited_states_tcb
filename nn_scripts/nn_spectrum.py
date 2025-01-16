@@ -299,6 +299,6 @@ hypers = [
     
     ]
 
-with open(os.path.join(outpath, "params.txt"), "w") as outf:
+with open(os.path.join(model_path, "params.txt"), "w") as outf:
     for k in hypers:
         outf.write(f"{k}\n")
