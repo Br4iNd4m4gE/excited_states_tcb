@@ -98,3 +98,11 @@ class ConstLayerNormalization(ks.layers.Layer):
         feat_x_std = np.std(feat_x, axis=0, keepdims=True)
         self.set_weights([feat_x_mean, feat_x_std])
         return feat_x_mean,feat_x_std
+
+class NormalizationLayer(tf.keras.layers.Layer):
+	def __init__(self, mean, var):
+		super(NormalizationLayer, self).__init__()
+		self.mean = mean
+		self.var = var
+	def call(self, inputs):
+		return (inputs-self.mean)/np.sqrt(self.var)
