@@ -10,6 +10,7 @@ import sys
 import argparse
 import subprocess
 import joblib
+import json
 import matplotlib as mpl
 mpl.use('Agg')	#important for plotting while running on cluster
 
@@ -29,16 +30,40 @@ from pyNNsMD.layers.inverse_distance import InverseDistance, FirstInverseDistanc
 from pyNNsMD.models.hp import hpModelBuilder
 
 
-############################
+############################ PARSE ARGUMENTS ##################################
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-g", "--gpuid", type=int)
 # ap.add_argument("-p", "--outname") # wird ggf. ignoriert
-ap.add_argument("-f", "--file")
+ap.add_argument("-f", "--file", required=True, type=str, dest="file", action="store", help="Path to input file", metavar="file")
+ap.add_argument("-c", "--conf", default=None, type=str, dest="conf", action="store", required=False, help="Path to config file, default: None", metavar="config")
 args = ap.parse_args()
 set_gpu([args.gpuid])          ###############  wichtig !!
 
-############################
+############################ CONFIG FILE ##################################
+
+config_path = args.conf
+if config_path is not None:
+    try:
+        with open(config_path, 'r') as config_file:
+            config_data = json.load(config_file)
+    except FileNotFoundError:
+        print(f"Config file {config_path} not found.")
+        exit(1)
+    DATA_FOLDER = config_data.get("DATA_FOLDER", DATA_FOLDER)
+    GEOMETRY_FILE = config_data.get("GEOMETRY_FILE", GEOMETRY_FILE)
+    ENERGY_FILE = config_data.get("ENERGY_FILE", ENERGY_FILE)
+    CHARGE_FILE = config_data.get("CHARGE_FILE", CHARGE_FILE)
+    ESP_FILE = config_data.get("ESP_FILE", ESP_FILE)
+    ESP_GRAD_FILE = config_data.get("ESP_GRAD_FILE", ESP_GRAD_FILE)
+    AT_COUNT = int(config_data.get("AT_COUNT", AT_COUNT))
+    CUTOFF = float(config_data.get("CUTOFF", CUTOFF))
+    MAX_NEIGHBORS = int(config_data.get("MAX_NEIGHBORS", MAX_NEIGHBORS))
+    FORCE_FILE = config_data.get("FORCE_FILE", FORCE_FILE)
+    PREFIX = config_data.get("PREFIX", PREFIX)
+    TARGET_FOLDER = config_data.get("TARGET_FOLDER", TARGET_FOLDER)
+
+############################ START OF SCRIPT ##################################
 
 #Inputs
 inputfile = args.file
