@@ -42,56 +42,71 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 
 ############################ CONFIG FILE ##################################
 
-config_path = args.conf
-if config_path is not None:
-    try:
-        with open(config_path, 'r') as config_file:
-            config_data = json.load(config_file)
-    except FileNotFoundError:
-        print(f"Config file {config_path} not found.")
-        exit(1)
-    DATA_FOLDER = config_data.get("DATA_FOLDER", DATA_FOLDER)
-    GEOMETRY_FILE = config_data.get("GEOMETRY_FILE", GEOMETRY_FILE)
-    ENERGY_FILE = config_data.get("ENERGY_FILE", ENERGY_FILE)
-    CHARGE_FILE = config_data.get("CHARGE_FILE", CHARGE_FILE)
-    ESP_FILE = config_data.get("ESP_FILE", ESP_FILE)
-    ESP_GRAD_FILE = config_data.get("ESP_GRAD_FILE", ESP_GRAD_FILE)
-    AT_COUNT = int(config_data.get("AT_COUNT", AT_COUNT))
-    CUTOFF = float(config_data.get("CUTOFF", CUTOFF))
-    MAX_NEIGHBORS = int(config_data.get("MAX_NEIGHBORS", MAX_NEIGHBORS))
-    FORCE_FILE = config_data.get("FORCE_FILE", FORCE_FILE)
-    PREFIX = config_data.get("PREFIX", PREFIX)
-    TARGET_FOLDER = config_data.get("TARGET_FOLDER", TARGET_FOLDER)
+# Function to read and parse the JSON configuration file
+def read_config(config_file):
+	if (config_file is None) or (not isfile(config_file)):
+		print(f"Config file {config_file} not found. Using default configuration.")
+		return {}
+	
+	if not config_file.endswith('.json'):
+		print(f"Config file {config_file} is not a .json file. Using default configuration.")
+		return {}
+
+	with open(config_file, 'r') as config_file:
+		config_data = json.load(config_file)
+    
+	return config_data
+
+# Read in configuration file
+config_file = args.conf
+config = read_config(config_file)
+          
+fit_epochs    = int(config.get("fit_epochs", 2000))
+lines_to_skip = int(config.get("lines_to_skip", 1)) # number of comment lines to skip in the input file, not containing atom coordinates (empty lines do NOT count!)
+batch_size    = int(config.get("batch_size", 128))
+
+# Hyperparameter search inputs
+hp_epochs = int(config.get("hp_epochs", 300))
+hp_factor = int(config.get("hp_factor", 18))
+hp_dict   = {
+	"neurons_min":	int(config.get("hp_neurons_min", 200)),
+	"neurons_max":	int(config.get("hp_neurons_max", 1000)),
+	"neurons_step":	int(config.get("hp_neurons_step", 50)),
+	"layers_min":	int(config.get("hp_layers_min", 2)),
+	"layers_max":	int(config.get("hp_layers_max", 4)),
+	"layers_step":	int(config.get("hp_layers_step", 1)),
+	"initial_lr":	config.get("hp_initial_lr", [1e-3, 5e-4, 1e-4]),
+	"l2_penalty":	config.get("hp_l2_penalty", [1e-3, 5e-4, 1e-4, 5e-5]),
+	"loss_ratio":   config.get("hp_loss_ratio", [1e-2, 5e-3, 1e-3, 5e-4])
+}
 
 ############################ START OF SCRIPT ##################################
 
 #Inputs
 inputfile = args.file
-lines_to_skip = 1 # number of lines to skip in the input file, not containing atom coordinates
+# lines_to_skip = 1 # number of lines to skip in the input file, not containing atom coordinates
 n_atoms = extract_number_of_atoms(inputfile, lines_to_skip)
 
-fit_epochs = 2000
-batch_size = 128
+# fit_epochs = 2000
+# batch_size = 128
 
 ##Hyperband Search Inputs
-hp_epochs = 300
-hp_factor = 18
-hp_dict = {
-	"neurons_min":	200,
-	"neurons_max":	1000,
-	"neurons_step":	50,
-	"layers_min":	2,
-	"layers_max":	4,
-	"layers_step":	1,
-	"initial_lr":	[1e-3,5e-4,1e-4],
-	"l2_penalty":	[1e-3,5e-4,1e-4,5e-5],
-	"loss_ratio":	[1e-2,5e-3,1e-3,5e-4]	#loss = loss_forces + loss_ratio*loss_energy
-}
+# hp_epochs = 300
+# hp_factor = 18
+# hp_dict = {
+# 	"neurons_min":	200,
+# 	"neurons_max":	1000,
+# 	"neurons_step":	50,
+# 	"layers_min":	2,
+# 	"layers_max":	4,
+# 	"layers_step":	1,
+# 	"initial_lr":	[1e-3, 5e-4, 1e-4],
+# 	"l2_penalty":	[1e-3, 5e-4, 1e-4,5e-5],
+# 	"loss_ratio":	[1e-2, 5e-3, 1e-3, 5e-4]	#loss = loss_forces + loss_ratio*loss_energy
+# }
 
 #Constants and Initializations
 AtoBohr, HaB_to_eVA = unit_conversions["A2Bohr"], unit_conversions["HaB_to_eVA"]
-
-###########################  Start of Sript  ##################################
 
 stop_early = tf.keras.callbacks.EarlyStopping(
     monitor = 'val_loss',

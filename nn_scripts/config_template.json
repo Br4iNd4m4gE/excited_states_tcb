@@ -1,14 +1,17 @@
 {
-    "DATA_FOLDER": "/lustre/work/ws/ws1/ka_he8978-dipeptide/training_data/B3LYP_aug-cc-pVTZ_vacuum",
-    "GEOMETRY_FILE": "Alanindipeptide.xyz",
-    "ENERGY_FILE": "energy_diff.txt",
-    "CHARGE_FILE": "charges.txt",
-    "ESP_FILE": "",
-    "ESP_GRAD_FILE": "",
-    "AT_COUNT": 22,
-    "CUTOFF": 10,
-    "FORCE_FILE": "forces.xyz",
-    "TOTAL_CHARGE": 0,
-    "PREFIX": "Alanindipeptide",
-    "TARGET_FOLDER": "/lustre/work/ws/ws1/ka_he8978-dipeptide/training_data/B3LYP_aug-cc-pVTZ_vacuum"
+    "fit_epochs": "2000",
+    "n_comment_lines": "1",
+    "batch_size": "128",
+    "hp_epochs": "300",
+    "hp_factor": "18",
+
+    "hp_neurons_min": "200",
+    "hp_neurons_max": "1000",
+    "hp_neurons_step": "50",
+    "hp_layers_min": "2",
+    "hp_layers_max": "4",
+    "hp_layers_step": "1",
+    "hp_initial_lr": "[1e-3, 5e-4, 1e-4]",
+    "hp_l2_penalty": "[1e-3, 5e-4, 1e-4,5e-5]",
+    "hp_loss_ratio": "[1e-2, 5e-3, 1e-3, 5e-4]"
   }
