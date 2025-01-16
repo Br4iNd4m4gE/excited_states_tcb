@@ -54,6 +54,7 @@ def read_config(config_file):
 
 	with open(config_file, 'r') as config_file:
 		config_data = json.load(config_file)
+		print(f"Using configuration from {config_file.name}.")
     
 	return config_data
 
