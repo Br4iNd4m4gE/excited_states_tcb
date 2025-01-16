@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, r2_score
 
 sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import shuffle_and_split_train_test, unit_conversions, load_data_excited_states_energies
+from pyNNsMD.utils.general import shuffle_and_split_train_test, unit_conversions, load_data_excited_states_energies, read_json_config
 from pyNNsMD.nn_pes_src.device import set_gpu
 from pyNNsMD.utils.loss import r2_metric
 from pyNNsMD.models.hp import hpModelBuilder_energy_oscStr
@@ -26,11 +26,16 @@ from pyNNsMD.esp_nn import precompute_feature_in_chunks, set_const_normalization
 ap = argparse.ArgumentParser()
 ap.add_argument("-g", "--gpuid", type=int)
 # ap.add_argument("-p", "--outname") # wird ggf. ignoriert
-ap.add_argument("-f", "--file")
+ap.add_argument("-f", "--file", required=True, type=str, dest="file", action="store", help="Path to input file", metavar="file")
+ap.add_argument("-c", "--conf", default=None, type=str, dest="conf", action="store", required=False, help="Path to config file, default: None", metavar="config")
 args = ap.parse_args()
 set_gpu([args.gpuid])          ###############  wichtig !!
 
 ############################ CONFIG FILE ##################################
+
+# Read in configuration file
+config_file = args.conf
+config = read_json_config(config_file)
 
 # paths and output
 inputfile = args.file

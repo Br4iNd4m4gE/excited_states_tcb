@@ -10,7 +10,6 @@ import sys
 import argparse
 import subprocess
 import joblib
-import json
 import matplotlib as mpl
 mpl.use('Agg')	#important for plotting while running on cluster
 
@@ -20,7 +19,7 @@ from sklearn.metrics import r2_score, mean_absolute_error
 from sklearn.model_selection import train_test_split
 
 sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import unit_conversions, load_data_excited_states_forces
+from pyNNsMD.utils.general import unit_conversions, load_data_excited_states_forces, read_json_config
 from pyNNsMD.nn_pes_src.device import set_gpu
 from pyNNsMD.layers.wrapper import WrapForcesModel
 from pyNNsMD.layers.normalize import NormalizationLayer
@@ -40,25 +39,9 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 
 ############################ CONFIG FILE ##################################
 
-# Function to read and parse the JSON configuration file
-def read_config(config_file):
-	if (config_file is None) or (not isfile(config_file)):
-		print(f"Config file {config_file} not found. Using default configuration.")
-		return {}
-	
-	if not config_file.endswith('.json'):
-		print(f"Config file {config_file} is not a .json file. Using default configuration.")
-		return {}
-
-	with open(config_file, 'r') as config_file:
-		config_data = json.load(config_file)
-		print(f"Using configuration from {config_file.name}.")
-    
-	return config_data
-
 # Read in configuration file
 config_file = args.conf
-config = read_config(config_file)
+config = read_json_config(config_file)
           
 fit_epochs    = int(config.get("fit_epochs", 2000))
 lines_to_skip = int(config.get("lines_to_skip", 1)) # number of comment lines to skip in the input file, not containing atom coordinates (empty lines do NOT count!)

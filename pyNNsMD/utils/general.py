@@ -2,6 +2,8 @@ import os
 import numpy as np
 import itertools
 import subprocess
+import json
+from os.path import isfile
 
 def grouper(iterable, n, fillvalue = None):
     """
@@ -239,3 +241,19 @@ def load_data_excited_states_energies(inputfile, lines_to_skip):
     xyz_esp_data[:, :, 1:4] *= A2Bohr
 
     return xyz_esp_data, energies, natoms, ntotal
+
+# Function to read and parse the JSON configuration file
+def read_json_config(config_file):
+	if (config_file is None) or (not isfile(config_file)):
+		print(f"Config file {config_file} not found. Using default configuration.")
+		return {}
+	
+	if not config_file.endswith('.json'):
+		print(f"Config file {config_file} is not a .json file. Using default configuration.")
+		return {}
+
+	with open(config_file, 'r') as config_file:
+		config_data = json.load(config_file)
+		print(f"Using configuration from {config_file.name}.")
+    
+	return config_data
