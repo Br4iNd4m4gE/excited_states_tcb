@@ -22,7 +22,7 @@ from pyNNsMD.utils.general import parse_single_file, shuffle_and_split, generate
 from pyNNsMD.utils.loss import custom_loss_forces
 from pyNNsMD.nn_pes_src.device import set_gpu
 from pyNNsMD.layers.gradients import EnergyGradientLayer
-from pyNNsMD.models.wrap import WrapForcesModel
+from pyNNsMD.layers.wrapper import WrapForcesModel
 
 import subprocess
 import joblib
@@ -82,6 +82,9 @@ hp = kt.HyperParameters()
 # 		return outputs_rescaled
 
 # class CustomModel(keras.Model):
+# 	def __init__(self, n_atoms, **kwargs):
+# 		super().__init__(**kwargs)
+# 		self.n_atoms = n_atoms
 # 	def call(self, inputs, **kwargs):
 # 		with tf.GradientTape() as tape:
 # 			tape.watch(inputs)
@@ -89,7 +92,7 @@ hp = kt.HyperParameters()
 # 			output = outputs[:, :1]
 # 			grads = tape.gradient(output,inputs)
 # 			pred_forces = -grads[:, :, :3]
-# 			pred_forces = tf.reshape(pred_forces, [-1, n_atoms * 3])
+# 			pred_forces = tf.reshape(pred_forces, [-1, self.n_atoms * 3])
 # 			allpred = tf.concat([output, pred_forces], 1)
 # 			tf.print("custom", allpred.shape)
 # 		return allpred
@@ -98,7 +101,7 @@ hp = kt.HyperParameters()
 # 		with tf.GradientTape(persistent=False) as tape:
 # 			tape.watch(x)
 # 			forces = y[:, 1:]
-# 			forces = tf.reshape(forces,[-1, n_atoms * 3])
+# 			forces = tf.reshape(forces,[-1, self.n_atoms * 3])
 # 			allpred = self(x, training=True)
 # 			loss = self.compiled_loss(y,allpred, regularization_losses=self.losses)
 # 		train_vars = self.trainable_variables
@@ -111,7 +114,7 @@ hp = kt.HyperParameters()
 # 		with tf.GradientTape(persistent=False) as tape:
 # 			tape.watch(x)
 # 			forces = y[:, 1:]
-# 			forces = tf.reshape(forces,[-1, n_atoms * 3])
+# 			forces = tf.reshape(forces,[-1, self.n_atoms * 3])
 # 			allpred = self(x, training=False)
 # 			self.compiled_loss(y,allpred,regularization_losses=self.losses)
 # 		self.compiled_metrics.update_state(forces, allpred[:, 1:])	#metric MAE only compares forces not the energy
