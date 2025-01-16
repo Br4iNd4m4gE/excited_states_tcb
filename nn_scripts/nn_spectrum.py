@@ -21,6 +21,7 @@ from pyNNsMD.utils.loss import r2_metric
 from pyNNsMD.layers.mlp import MLP
 from pyNNsMD.layers.features import FeatureGeometric
 from pyNNsMD.layers.normalize import ConstLayerNormalization
+from pyNNsMD.models.hp import hp_simple_model_site
 
 from pyNNsMD.esp_nn import precompute_feature_in_chunks, set_const_normalization_from_features
 from pyNNsMD.esp_nn import OutputSpec, SubNet, build_model, get_limits
@@ -99,134 +100,6 @@ clean_up_hpoutpath = True # delet hp_outpath before tuning (catch some errors 'o
 
 ########################  End of User section  ################################
 
-# from pyNNsMD.utils.activ import leaky_softplus
-def hp_simple_model_site(hp):
-    # hp = kt.HyperParameters() must be given if single model shall be constructed
-    """ Building up the esp-model for hyperparametersearch. This is a modified 
-    verion of esp_nn.py/build_model() with hyperparameters. Therefore, the
-    main architecture is fixed. You may vary number of neurons in MLP layer,
-    the depth, the l1 or l2 regularization and the learning rate for now."""
-
-    # 0. create interatomic distance matrix
-    geom_idx = [(i,j) for i,j in combinations(range(natoms), 2)] #len=3570
-    interatomic_dists = np.array(geom_idx) # this is [ [0,1],[0,2],...,[83,84] ]
-
-    # 1. Geom in and Geom Prep (later already has feat_std)
-    geom_in, geom_prep = build_geom_preprocess_layer(natoms, 
-                                                     interatomic_dists, 
-                                                     norm=norm)
-    
-    # 2. Esp_in 
-    esp_in = ks.Input(shape=(natoms,), dtype='float32', name='esp_input')
-
-    # 3. Concat
-    rep = ks.layers.Concatenate(name="concat_layer")([geom_prep, esp_in])
-
-    # 4. MLP with HP search
-    neurons = hp.Int("nn_size", neurons_min, neurons_max, neurons_step)
-    hp_layer_depth = hp.Int("depth", layers_min, layers_max, layers_step)
-    hp_regularizer = regulizer
-    mlp = MLP(dense_units=neurons, 
-              dense_depth=hp_layer_depth, 
-            #   dense_activ=leaky_softplus(alpha=0.03),  # Changed to use the leaky_softplus function
-            #   dense_activ_last=leaky_softplus(alpha=0.03),  # Changed to use the leaky_softplus function
-              dense_activ=dense_activ, 
-              dense_activ_last=dense_activ,
-              dense_kernel_regularizer=hp_regularizer,
-              name="monolith")
-    
-    # 5. Output
-    res = mlp(rep)
-    final_layer = ks.layers.Dense(2, 
-                    activation=final_activ, 
-                    use_bias=True, 
-                    name="out_vom_mlp")(res)
-    
-    # summary 
-    inputs_list = [geom_in, esp_in]
-    outputs_list = [final_layer]
-
-    # make a model out of it all
-    model = ks.Model(inputs=inputs_list, outputs=outputs_list)
-    hp_learning_rate = hp.Choice("learning_rate", values=learning_rates)
-    opti = ks.optimizers.Adam(learning_rate=hp_learning_rate)
-    # get metrics offenes ToDo !
-    for name, o in output_spec.items():
-        # if targets are scaled, the MAE must be converted to original data units
-        maes=[]
-        if o.scaler:
-            mae_scaled = ScaledMeanAbsoluteError(scaling_shape=o.scaler.scale_.shape)
-            mae_scaled.set_scale(o.scaler.scale_)
-            maes.append(mae_scaled)
-        else:
-            maes.append("mean_absolute_error")
-    # final model configuration
-    model.compile(optimizer=opti, 
-                  loss = loss,
-                  metrics=[[mae, r2_metric] for mae in maes]) # for history and tuning
-    return model
-
-def hp_simple_model_site_noesp(hp):
-    # hp = kt.HyperParameters() must be given if single model shall be constructed
-    """ Building up the esp-model for hyperparametersearch. This is a modified 
-    verion of esp_nn.py/build_model() with hyperparameters. Therefore, the
-    main architecture is fixed. You may vary number of neurons in MLP layer,
-    the depth, the l1 or l2 regularization and the learning rate for now."""
-    # 0. create interatomic distance matrix
-    geom_idx = [(i,j) for i,j in combinations(range(natoms), 2)] #len=3570
-    interatomic_dists = np.array(geom_idx) # this is [ [0,1],[0,2],...,[83,84] ]
-    # 1. Geom in and Geom Prep (later already has feat_std)
-    geom_shape = (natoms, 3)
-    geom_in = ks.Input(shape=geom_shape, dtype='float32', name='geo_input')
-    feat_layer = FeatureGeometric(invd_shape = interatomic_dists.shape, 
-                                  name="feat_layer")
-    # which interatomic distances to use
-    feat_layer.set_mol_index(interatomic_dists, None, None)
-    full = feat_layer(geom_in)
-    full = ConstLayerNormalization(name="feat_std")(full)
-    # 2. Esp_in 
-    # esp_in = ks.Input(shape=(natoms,), dtype='float32', name='esp_input')
-    # # 3. Concat
-    # rep = ks.layers.Concatenate(name="concat_layer")([geom_prep, esp_in])
-    # 4. MLP with HP search
-    neurons = hp.Int("nn_size", neurons_min, neurons_max, neurons_step)
-    hp_layer_depth = hp.Int("depth", layers_min, layers_max, layers_step)
-    hp_regularizer = regulizer
-    mlp = MLP(dense_units=neurons, 
-              dense_depth=hp_layer_depth, 
-              dense_activ=dense_activ, 
-              dense_activ_last=dense_activ,
-              dense_kernel_regularizer=hp_regularizer,
-              name="monolith")
-    # 5. Output
-    res = mlp(full)
-    final_layer = ks.layers.Dense(1, 
-                    activation=final_activ, 
-                    use_bias=True, 
-                    name="out_vom_mlp")(res)
-    # summary 
-    inputs_list = [geom_in]
-    outputs_list = [final_layer]
-    # make a model out of it all
-    model = ks.Model(inputs=inputs_list, outputs=outputs_list)
-    hp_learning_rate = hp.Choice("learning_rate", values=learning_rates)
-    opti = ks.optimizers.Adam(learning_rate=hp_learning_rate)
-    # get metrics offenes ToDo !
-    for name, o in output_spec.items():
-        # if targets are scaled, the MAE must be converted to original data units
-        maes=[]
-        if o.scaler:
-            mae_scaled = ScaledMeanAbsoluteError(scaling_shape=o.scaler.scale_.shape)
-            mae_scaled.set_scale(o.scaler.scale_)
-            maes.append(mae_scaled)
-        else:
-            maes.append("mean_absolute_error")
-    # final model configuration
-    model.compile(optimizer=opti, 
-                  loss = loss,
-                  metrics=[[mae, r2_metric] for mae in maes]) # for history and tuning
-    return model
-
 # Logger so that output will be written to both terminal and stdout
 class Logger(object):
     def __init__(self):
@@ -245,7 +118,7 @@ sys.stdout=Logger()
 ###########################  Start of Sript  ##################################
 
 ##### 0. Constants and Definitions
-Ha2eV, A2Bohr = unit_conversions["Ha2eV"], unit_conversions["A2Bohr"]
+Ha2eV, A2Bohr = unit_conversions["EhtoeV"], unit_conversions["A2Bohr"]
 
 stop_early = ks.callbacks.EarlyStopping(monitor='val_loss', # which quantity to monitor
                                         patience=callback_patience, # how many epochs without improvement to tolerate
