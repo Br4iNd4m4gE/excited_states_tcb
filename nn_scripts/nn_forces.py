@@ -108,7 +108,7 @@ esp_var              = np.mean(x_train_dist_var[-n_atoms:])
 norm_var             = np.ones(dist_shape[1])
 norm_var[:-n_atoms]  = dist_var * norm_var[:-n_atoms]
 norm_var[-n_atoms:]  = esp_var * norm_var[-n_atoms:]
-normalizer           = NormalizationLayer(norm_mean,norm_var)	#initialize normalization layer
+normalizer           = NormalizationLayer(norm_mean, norm_var)	#initialize normalization layer
 scaler               = StandardScaler(with_std=False)	#without std the performance was better, distribution is already good apparently
 scaler.fit(y_train) #y_train includes total energy and all forces
 force_std            = np.mean(np.std(y_train[:,1:]))
