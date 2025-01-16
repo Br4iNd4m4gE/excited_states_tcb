@@ -102,7 +102,9 @@ plot_learning_curve = True # plot log(mse) vs. epochs
 
 # other
 clean_up_hpoutpath = True # delet hp_outpath before tuning (catch some errors 'oracle exited training' etc.)
+
 ########################  End of User section  ################################
+
 # from pyNNsMD.utils.activ import leaky_softplus
 def hp_simple_model_site(hp):
     # hp = kt.HyperParameters() must be given if single model shall be constructed
@@ -184,63 +186,6 @@ def hp_simple_model_site_noesp(hp):
     # esp_in = ks.Input(shape=(natoms,), dtype='float32', name='esp_input')
     # # 3. Concat
     # rep = ks.layers.Concatenate(name="concat_layer")([geom_prep, esp_in])
-    # 4. MLP with HP search
-    neurons = hp.Int("nn_size", neurons_min, neurons_max, neurons_step)
-    hp_layer_depth = hp.Int("depth", layers_min, layers_max, layers_step)
-    hp_regularizer = hp.Choice("use_reg_weight", values=regulizers)
-    mlp = MLP(dense_units=neurons, 
-              dense_depth=hp_layer_depth, 
-              dense_activ=dense_activ, 
-              dense_activ_last=dense_activ,
-              dense_kernel_regularizer=hp_regularizer,
-              name="monolith")
-    # 5. Output
-    res = mlp(full)
-    final_layer = ks.layers.Dense(1, 
-                    activation=final_activ, 
-                    use_bias=True, 
-                    name="out_vom_mlp")(res)
-    # summary 
-    inputs_list = [geom_in]
-    outputs_list = [final_layer]
-    # make a model out of it all
-    model = ks.Model(inputs=inputs_list, outputs=outputs_list)
-    hp_learning_rate = hp.Choice("learning_rate", values=learning_rates)
-    opti = ks.optimizers.Adam(learning_rate=hp_learning_rate)
-    # get metrics offenes ToDo !
-    for name, o in output_spec.items():
-        # if targets are scaled, the MAE must be converted to original data units
-        maes=[]
-        if o.scaler:
-            mae_scaled = ScaledMeanAbsoluteError(scaling_shape=o.scaler.scale_.shape)
-            mae_scaled.set_scale(o.scaler.scale_)
-            maes.append(mae_scaled)
-        else:
-            maes.append("mean_absolute_error")
-    # final model configuration
-    model.compile(optimizer=opti, 
-                  loss = loss,
-                  metrics=[[mae, r2_metric] for mae in maes]) # for history and tuning
-    return model
-
-def hp_simple_model_cpl(hp):
-    # hp = kt.HyperParameters() must be given if single model shall be constructed
-    """ Building up the esp-model for hyperparametersearch. This is a modified 
-    verion of esp_nn.py/build_model() with hyperparameters. Therefore, the
-    main architecture is fixed. You may vary number of neurons in MLP layer
-    and the learning rate for now."""
-    # 0. create interatomic distance matrix
-    interatomic_dists = generate_invd_list("cpl", "inter", natoms)
-    interatomic_dists = np.array(interatomic_dists) #shape (7225,2)
-    # 1. Geom in and Geom Prep (later already has feat_std)
-    geom_shape = (2*natoms, 3)
-    geom_in = ks.Input(shape=geom_shape, dtype='float32', name='geo_input')
-    feat_layer = FeatureGeometric(invd_shape = interatomic_dists.shape, 
-                                  name="feat_layer")
-    # which interatomic distances to use
-    feat_layer.set_mol_index(interatomic_dists, None, None)
-    full = feat_layer(geom_in)
-    full = ConstLayerNormalization(name="feat_std")(full)
     # 4. MLP with HP search
     neurons = hp.Int("nn_size", neurons_min, neurons_max, neurons_step)
     hp_layer_depth = hp.Int("depth", layers_min, layers_max, layers_step)

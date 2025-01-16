@@ -34,7 +34,7 @@ from pyNNsMD.models.hp import hpModelBuilder
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-g", "--gpuid", type=int)
-# ap.add_argument("-p", "--outname") # wird ggf. ignoriert
+# ap.add_argument("-p", "--outname")
 ap.add_argument("-f", "--file", required=True, type=str, dest="file", action="store", help="Path to input file", metavar="file")
 ap.add_argument("-c", "--conf", default=None, type=str, dest="conf", action="store", required=False, help="Path to config file, default: None", metavar="config")
 args = ap.parse_args()

@@ -53,6 +53,13 @@ while getopts ':s' flag; do
   esac
 done
 
+if [ -z "$python_script" ]
+then
+  echo "ERROR: Python file not specified."
+  print_usage
+  exit 1
+fi
+
 if [ -f train.err ]
 then rm train.err
 fi

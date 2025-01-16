@@ -7,6 +7,8 @@ queue_script="$(dirname "$0")/qpython_forces_spectrum.sh"
 
 data_file="$1"
 
+config_file="$2"
+
 print_usage() {
   echo "Usage: 'submit_python_file.sh' to run without wandb or 'submit_python_file.sh -s' to sync to wandb"
 }
@@ -26,6 +28,13 @@ fi
 
 # Print the name of the data file
 echo "Using Input file: $data_file"
+
+# Check if the provided config file exists
+if [ ! -z "$config_file" ] && [ ! -s "$config_file" ]; then
+  echo "The provided config file '$config_file' is empty or does not exist."
+else
+  echo "Using Config file: $config_file"
+fi
 
 sync=false
 while getopts ':s' flag; do
@@ -60,7 +69,14 @@ then rm train.out
 fi
 
 name=`basename $PWD`
-job_id=$(qsub -terse -N $name $queue_script $python_script $data_file)
+
+# Submit the job
+if [ -z "$config_file" ]; then
+    job_id=$(qsub -terse -N $name $queue_script $python_script $data_file)
+else
+    job_id=$(qsub -terse -N $name $queue_script $python_script $data_file $config_file)
+fi
+
 echo "Submitted job $job_id to queue as $name"
 
 echo `date`" $PWD" >> /data/$USER/checklist.txt
