@@ -68,7 +68,7 @@ hp_out_name        = config.get("hp_out_name", "outputtuner")
 ############################ PARAMETERS ##################################
 
 # Normalization of geometries
-norm = "const" #  const normalizes geometries once over all data ; 'batch' in batchs
+norm = "const" #  "const" normalizes geometries once over all data; "batch" in batchs
 
 # Other (BUGFIX)
 clean_up_hpoutpath = True # delete hp_out_path before tuning (catch some errors 'oracle exited training' etc.)
@@ -141,15 +141,14 @@ output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
 # Define x_train and y_train
 if esp_in_traindata:
     x_train = [data["coords"], data["esp"]]
-    y_train = data["targets_scaled"]
     callbacks = [stop_early, lr_reduction]
     x_test = [coords_test, esp_test]
 else:
     x_train = data["coords"]
-    y_train = data["targets_scaled"]
     callbacks = [stop_early]
     x_test = coords_test
 
+y_train = data["targets_scaled"]
 
 ## 2. Hyperparameter Search
 
@@ -219,7 +218,7 @@ print("best val loss (atomic): ", hp_hist.history["val_loss"][hp_best_epoch])
 print("best val R2: ", hp_hist.history["val_r2_metric"][hp_best_epoch])
 
 # Save results
-plt.hist(energies[:,1], bins=20)
+plt.hist(energies[:, 1], bins=20)
 plt.savefig(join(outpath, "osc_distribution_last.png"), dpi=300)
 
 # Save energies to plot scatters

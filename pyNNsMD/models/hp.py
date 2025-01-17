@@ -96,8 +96,8 @@ class hpModelBuilder_energy_oscStr:
         geom_in, geom_prep = build_geom_preprocess_layer(self.natoms, interatomic_dists, self.norm)
 
         # Add scaling layer
-        geom_prep = ScalingLayer(self.coords_mean, self.coords_std)(geom_prep)
-        
+        geom_prep = ScalingLayer(self.feat_coords_mean, self.feat_coords_std)(geom_prep)
+
         if self.esp_in_traindata:
             # 2. Esp_in
             esp_in = keras.Input(shape=(self.natoms,), dtype='float32', name='esp_input')
