@@ -250,12 +250,12 @@ ax.axvline(x=hp_best_epoch, color="gray", ls="--")
 ax.axhline(y=hp_hist.history["val_loss"][hp_best_epoch], color="gray", ls="--")
 ax.legend()
 f.savefig(join(model_path, "test-loss.png"), dpi=300)
-        
+
 # Plot Scatter
 fig, ax = plt.subplots(1, figsize=(6,6))
 ax.hist2d(energies_eV, hp_pred_scaled_eV.flatten(),
-                bins=1000, # Just for Tests; Mila wrote 1000
-                cmin=1, # Just for Tests; Mila wrote 1 
+                bins=1000,
+                cmin=1,
                 norm=mcolors.PowerNorm(0.5))
 b,t = get_limits([energies_eV, hp_pred_scaled_eV])
 ax.set_xlabel("reference (eV)")
