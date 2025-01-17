@@ -199,28 +199,35 @@ test_mae_osc = mean_absolute_error(osc_ref, osc_pred)
 # Evaluate (scaled) model -> the model without the wrapper (true performance of model)
 ref_scaled = targetscaler.transform(targets_test.reshape(-1,2))
 hp_metrics = hp_model.evaluate(x_test, ref_scaled)
+model_pred_scaled = hp_model.predict(x_test) # the direct output of the model (before the wrapper)
+
+# Extract performance metrics
+R2_total  = hp_metrics[2]
+R2_energy = r2_score(ref_scaled[:, 0], model_pred_scaled[:, 0])
+R2_osc    = r2_score(ref_scaled[:, 1], model_pred_scaled[:, 1])
 
 # Get best hyperparameters
 best_hps_config_str = "\n".join([f"{key}: {value}" for key, value in best_hps.get_config()["values"].items()])
 
 # Print performance metrics in train.out
 print("\n\n", 70 * "-", "\n\t\t\t\t\t\t\t\tSummary\n", 70 * "-")
-print("\n\t> Result of HP search")
+print("\n\t> Properties of final model")
 print(best_hps_config_str)
 
 print("\n\t> Performance of final model")
-print("test loss: ", hp_metrics[0])
-print("test MAE [eV]: ", test_mae_eV)
+print("test loss [atomic]: ", hp_metrics[0])
+print("test MAE energy [eV]: ", test_mae_eV)
 print("test MAE osc: ", test_mae_osc)
-print("test R2: ", hp_metrics[2])
-print("full metrics: ", hp_metrics)
-print(f"best epoch: {hp_best_epoch_idx}")
-print("---")
-print("best train loss (atomic): ", hp_hist.history["loss"][hp_best_epoch_idx])
-print("best train R2: ", hp_hist.history["r2_metric"][hp_best_epoch_idx])
-print("---")
-print("best val loss (atomic): ", hp_hist.history["val_loss"][hp_best_epoch_idx])
-print("best val R2: ", hp_hist.history["val_r2_metric"][hp_best_epoch_idx])
+print("test R2 energy: ", R2_energy)
+print("test R2 osc: ", R2_osc)
+print("test R2 (combined): ", R2_total)
+print("best epoch: ", hp_best_epoch_idx)
+print("-----")
+print("best train loss [atomic]: ", hp_hist.history["loss"][hp_best_epoch_idx])
+print("best train R2 (combined): ", hp_hist.history["r2_metric"][hp_best_epoch_idx])
+print("-----")
+print("best val loss [atomic]: ", hp_hist.history["val_loss"][hp_best_epoch_idx])
+print("best val R2 (combined): ", hp_hist.history["val_r2_metric"][hp_best_epoch_idx])
 
 # Save data of energies and oscillator strengths of predictions and references
 np.savetxt(join(model_path, 'model_ref_energies_eV.dat'),       energies_ref_eV)
@@ -250,8 +257,8 @@ ax.hist2d(energies_ref_eV, model_pred_eV.flatten(),
                 cmin=1,
                 norm=mcolors.PowerNorm(0.5))
 b,t = get_limits([energies_ref_eV, model_pred_eV])
-ax.set_xlabel("reference (eV)")
-ax.set_ylabel("prediction (eV)")
+ax.set_xlabel("reference [eV]")
+ax.set_ylabel("prediction [eV]")
 ax.set_aspect("equal")
 ax.set_ylim((b,t))
 opti_ref = np.linspace(b,t,num=10)
@@ -263,7 +270,7 @@ ax.hist2d(targets_test[:, 1], model_pred_eV[:, 1],
                 bins=1000,
                 cmin=1,
                 norm=mcolors.PowerNorm(0.5))
-b, t = get_limits([targets_test[:, 1], model_pred_eV[:, 1]])
+b, t = get_limits([osc_ref, osc_pred])
 ax.set_xlabel("reference")
 ax.set_ylabel("prediction")
 ax.set_aspect("equal")
