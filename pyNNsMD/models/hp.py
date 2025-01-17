@@ -142,6 +142,8 @@ class hpModelBuilder_energy_oscStr:
         model.compile(optimizer=opti, loss=self.loss, metrics=[[mae, self.r2_metric] for mae in maes]) # for history and tuning
 
         # 9. Set normalization parameters
+        # # The layer calculating inverse distances ist the first layer of the model. The result of this layer is used to fit the normalization layer (x -> x-µ/std).
+        # # Basically a normalization layer is fitted to the inverse distances.
         model.get_layer('feat_std').set_weights([self.feat_x_mean, self.feat_x_std])
         return model
     
