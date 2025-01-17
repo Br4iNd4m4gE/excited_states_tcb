@@ -157,7 +157,8 @@ else:
 
 ## 2. Hyperparameter Search
 
-if clean_up_hpoutpath: # removes directory which can be necessary
+# Remove old outputtuner directory
+if clean_up_hpoutpath:
     if os.path.isdir(hp_out_path): # this is needed if tuner quits with "INFO:tensorflow:Oracle triggered exit"
         shutil.rmtree(hp_out_path) # = bash's rm -rf
 
@@ -178,11 +179,10 @@ hp_model = tuner.hypermodel.build(best_hps)
 ## 3. Training best hp model
 
 # pre-calculate geometries to fit the feat_std layers for normalizing inv.dists
-if norm == "const": # eigentlich immer oder?
-    feat_precomp = precompute_feature_in_chunks(data["coords_scaled"], hp_model, batch_size=32)  # changed for test
-    # now the scaler of feat_std layer must be set. So weights and biases of this
-    # layer must be so that x -> x-µ/std
-    set_const_normalization_from_features(feat_precomp, hp_model)
+feat_precomp = precompute_feature_in_chunks(data["coords_scaled"], hp_model, batch_size=32)  # changed for test
+# now the scaler of feat_std layer must be set. So weights and biases of this
+# layer must be so that x -> x-µ/std
+set_const_normalization_from_features(feat_precomp, hp_model)
 
 # fit the models
 hp_hist = hp_model.fit(x_train, target, epochs=epochs,
