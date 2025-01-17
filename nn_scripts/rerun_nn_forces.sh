@@ -48,7 +48,7 @@ with tf.keras.utils.custom_object_scope({'my_loss_fn': custom_loss_forces(0.005)
 # Load data
 inputfile = args.file
 lines_to_skip = 1 # comment lines
-x, y = load_data_excited_states_forces(inputfile, lines_to_skip)
+x, y, _, _ = load_data_excited_states_forces(inputfile, lines_to_skip)
 
 print("Shape of x:", np.array(x).shape)
 print("Shape of y:", np.array(y).shape)

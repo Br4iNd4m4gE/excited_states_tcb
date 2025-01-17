@@ -25,6 +25,7 @@ class WrapForcesModel(ks.Model):
 class WrapEnergyModel(ks.Model):
     """
     Wraps the NN model for the energies + oscillator strengths.
+    Output: Unit of energy in Hartree
     """
     def __init__(self, model, mean, var):
         super().__init__()

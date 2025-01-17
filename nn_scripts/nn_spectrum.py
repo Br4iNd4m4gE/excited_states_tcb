@@ -5,7 +5,6 @@ import sys
 import numpy as np
 import argparse
 import shutil
-import joblib
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import tensorflow as tf
@@ -23,13 +22,12 @@ from pyNNsMD.nn_pes_src.device import set_gpu
 from pyNNsMD.utils.loss import r2_metric
 from pyNNsMD.models.hp import hpModelBuilder_energy_oscStr
 from pyNNsMD.esp_nn import OutputSpec, get_limits
-from pyNNsMD.layers.wrapper import WrapEnergyModel, WrapForcesModel
+from pyNNsMD.layers.wrapper import WrapEnergyModel
 
 ############################ PARSE ARGUMENTS ##################################
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-g", "--gpuid", type=int)
-# ap.add_argument("-p", "--outname") # wird ggf. ignoriert
 ap.add_argument("-f", "--file", required=True, type=str, dest="file", action="store", help="Path to input file", metavar="file")
 ap.add_argument("-c", "--conf", default=None, type=str, dest="conf", action="store", required=False, help="Path to config file, default: None", metavar="config")
 args = ap.parse_args()
@@ -139,13 +137,13 @@ output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
 
 # Define x_train and y_train
 if esp_in_traindata:
-    x_train = [data["coords"], data["esp"]]
+    x_train   = [data["coords"], data["esp"]]
     callbacks = [stop_early, lr_reduction]
-    x_test = [coords_test, esp_test]
+    x_test    = [coords_test, esp_test]
 else:
-    x_train = data["coords"]
+    x_train   = data["coords"]
     callbacks = [stop_early]
-    x_test = coords_test
+    x_test    = coords_test
 
 y_train = data["targets_scaled"]
 
@@ -172,23 +170,16 @@ hp_model = tuner.hypermodel.build(best_hps)
 hp_hist = hp_model.fit(x_train, data["targets_scaled"], epochs=epochs, validation_split=0.1, verbose=2, callbacks=callbacks)
 
 # Wrap the model
-# wrapped_model = WrapEnergyModel(hp_model, targetscaler)
-scaler_mean, scaler_var = tf.convert_to_tensor(targetscaler.mean_, dtype=tf.float32), tf.convert_to_tensor(targetscaler.var_, dtype=tf.float32)
-# wrapped_model = WrapEnergyModel(hp_model, scaler_mean, scaler_var)
-print(targetscaler.mean_.shape, targetscaler.var_.shape)
 wrapped_model = WrapEnergyModel(hp_model, targetscaler.mean_, targetscaler.var_)
 
 # Single prediction
-pred = wrapped_model.predict(x_train)
+pred_wrapped = wrapped_model.predict(x_test) # you need to call the model once, before saving it
 
 # Save model
 wrapped_model.save(model_path)
 
-# Save the scaler
-joblib.dump(targetscaler, "scaler.pkl")
-
 # Get best epoch
-hp_best_epoch = np.argmin(hp_hist.history["val_loss"])
+hp_best_epoch_idx = np.argmin(hp_hist.history["val_loss"])
 
 
 ## 4. Evaluation
@@ -209,7 +200,7 @@ hp_pred_scaled_eV = hp_pred_scaled[:, 0] * EhtoeV
 # Evaluate model
 hp_metrics = hp_model.evaluate(x_test, ref_scaled)
 
-# Output important metrics    
+# Output important metrics
 print("\n\n", 20 * "-", "\n\t\tSummary\n", 20 * "-")
 print("\n\tHP search lead to:\n", best_hps.get_config()["values"])
 
@@ -221,17 +212,13 @@ print("test MAE (eV): ", test_mae_eV)
 print("test MAE osc: ", test_mae_osc)
 print("test R2: ", hp_metrics[2])
 print("full metrics: ", hp_metrics)
-print(f"best epoch: {hp_best_epoch}")
+print(f"best epoch: {hp_best_epoch_idx}")
 print("---")
-print("best train loss (atomic): ", hp_hist.history["loss"][hp_best_epoch])
-print("best train R2: ", hp_hist.history["r2_metric"][hp_best_epoch])
+print("best train loss (atomic): ", hp_hist.history["loss"][hp_best_epoch_idx])
+print("best train R2: ", hp_hist.history["r2_metric"][hp_best_epoch_idx])
 print("---")
-print("best val loss (atomic): ", hp_hist.history["val_loss"][hp_best_epoch])
-print("best val R2: ", hp_hist.history["val_r2_metric"][hp_best_epoch])
-
-# Save results
-plt.hist(energies[:, 1], bins=20)
-plt.savefig(join(outpath, "osc_distribution_last.png"), dpi=300)
+print("best val loss (atomic): ", hp_hist.history["val_loss"][hp_best_epoch_idx])
+print("best val R2: ", hp_hist.history["val_r2_metric"][hp_best_epoch_idx])
 
 # Save energies to plot scatters
 np.savetxt(join(model_path, 'hp_ref_energies_eV.dat'), energies_eV)
@@ -248,9 +235,9 @@ ax.plot(np.arange(len(hp_hist.history["loss"])), hp_hist.history["val_loss"], la
 ax.set_yscale("log")
 ax.set_ylabel("log(MSE)")
 ax.set_xlabel("epochs")
-ax.plot(hp_best_epoch, hp_hist.history["val_loss"][hp_best_epoch], ls="", marker="x", ms=10, c="black", label="best model")
-ax.axvline(x=hp_best_epoch, color="gray", ls="--")
-ax.axhline(y=hp_hist.history["val_loss"][hp_best_epoch], color="gray", ls="--")
+ax.plot(hp_best_epoch_idx, hp_hist.history["val_loss"][hp_best_epoch_idx], ls="", marker="x", ms=10, c="black", label="best model")
+ax.axvline(x=hp_best_epoch_idx, color="gray", ls="--")
+ax.axhline(y=hp_hist.history["val_loss"][hp_best_epoch_idx], color="gray", ls="--")
 ax.legend()
 f.savefig(join(model_path, "test-loss.png"), dpi=300)
 
