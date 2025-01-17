@@ -59,7 +59,7 @@ class hpModelBuilder_energy_oscStr:
     """
     Class for HP search for energy + oscillator strength NN.
     """
-    def __init__(self, hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss, r2_metric, norm, coords_scaled):
+    def __init__(self, hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss, r2_metric, norm, all_input_coords_to_normalize):
         self.hp_dict = hp_dict
         self.natoms = natoms
         self.esp_in_traindata = esp_in_traindata
@@ -70,10 +70,10 @@ class hpModelBuilder_energy_oscStr:
         self.r2_metric = r2_metric
         self.norm = norm
 
-        # Precompute normalization parameters (for normalization of inv distance layer)
-        feat_precomp = precompute_feature_in_chunks(coords_scaled, self.build_initial_model(), batch_size=32)
-        self.feat_x_mean = np.mean(feat_precomp, axis=0, keepdims=True) # inv distance mean
-        self.feat_x_std = np.std(feat_precomp, axis=0, keepdims=True)
+        # Precompute normalization parameters (for normalization of inv distance layer). Needs all input coords
+        feat_precomp = precompute_feature_in_chunks(all_input_coords_to_normalize, self.build_initial_model(), batch_size=32)
+        self.feat_coords_mean = np.mean(feat_precomp, axis=0, keepdims=True) # inv distance mean
+        self.feat_coords_std = np.std(feat_precomp, axis=0, keepdims=True)
 
     def build_initial_model(self):
         """ Build an initial model to precompute features for normalization. """
@@ -95,7 +95,7 @@ class hpModelBuilder_energy_oscStr:
         geom_in, geom_prep = build_geom_preprocess_layer(self.natoms, interatomic_dists, self.norm)
 
         if self.esp_in_traindata:
-            # 2. Esp_in 
+            # 2. Esp_in
             esp_in = keras.Input(shape=(self.natoms,), dtype='float32', name='esp_input')
 
             # 3. Concat
@@ -144,7 +144,7 @@ class hpModelBuilder_energy_oscStr:
         # 9. Set normalization parameters
         # # The layer calculating inverse distances ist the first layer of the model. The result of this layer is used to fit the normalization layer (x -> x-µ/std).
         # # Basically a normalization layer is fitted to the inverse distances.
-        model.get_layer('feat_std').set_weights([self.feat_x_mean, self.feat_x_std])
+        model.get_layer('feat_std').set_weights([self.feat_coords_mean, self.feat_coords_std])
         return model
     
     def perform_hp_search(self, x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_outpath):

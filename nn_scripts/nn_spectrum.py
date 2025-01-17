@@ -21,7 +21,7 @@ from pyNNsMD.utils.general import shuffle_and_split_train_test, unit_conversions
 from pyNNsMD.nn_pes_src.device import set_gpu
 from pyNNsMD.utils.loss import r2_metric
 from pyNNsMD.models.hp import hpModelBuilder_energy_oscStr
-from pyNNsMD.esp_nn import precompute_feature_in_chunks, set_const_normalization_from_features, OutputSpec, get_limits
+from pyNNsMD.esp_nn import OutputSpec, get_limits
 
 ############################ PARSE ARGUMENTS ##################################
 
