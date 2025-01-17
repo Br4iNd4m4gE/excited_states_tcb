@@ -174,15 +174,17 @@ hp_hist = hp_model.fit(x_train, data["targets_scaled"], epochs=epochs, validatio
 wrapped_model = WrapEnergyModel(hp_model, targetscaler)
 
 # Bugtesting
-# pred = hp_model.predict(x_test)
-# print("pred shape: ", pred.shape)
-# pred_wrapped = wrapped_model(x_test)
-# print("pred_wrapped shape: ", pred_wrapped.shape)
-print("Model Summary:")
+print("Model HP MODEL Summary:")
+hp_model.summary()
+print("Model Input Shape:", hp_model.input_shape)
+print("Model Output Shape:", hp_model.output_shape)
+# print("Model Configuration:", hp_model.get_config())
+print(20 * "-")
+print("Model WRAPPED MODEL Summary:")
 wrapped_model.model.summary()
 print("Model Input Shape:", wrapped_model.model.input_shape)
 print("Model Output Shape:", wrapped_model.model.output_shape)
-print("Model Configuration:", wrapped_model.model.get_config())
+# print("Model Configuration:", wrapped_model.model.get_config())
 
 # Save model
 wrapped_model.save(model_path)
