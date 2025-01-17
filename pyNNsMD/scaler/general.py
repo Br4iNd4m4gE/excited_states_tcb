@@ -1,6 +1,7 @@
 import json
-
 import numpy as np
+import tensorflow as tf
+from tensorflow.keras.layers import Layer
 
 
 class SegmentStandardScaler:
@@ -79,3 +80,13 @@ class SegmentStandardScaler:
         print("Info: Data feature shape", self._encountered_y_shape)
         print("Info: Using feature-scale", self.feat_std.shape, ":", self.feat_std)
         print("Info: Using feature-offset", self.feat_mean.shape, ":", self.feat_mean)
+
+class ScalingLayer(Layer):
+    """Used to scale the input data to zero mean and unit variance"""
+    def __init__(self, mean, std, **kwargs):
+        super(ScalingLayer, self).__init__(**kwargs)
+        self.mean = tf.constant(mean, dtype=tf.float32)
+        self.std = tf.constant(std, dtype=tf.float32)
+
+    def call(self, inputs):
+        return (inputs - self.mean) / self.std

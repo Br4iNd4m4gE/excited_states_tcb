@@ -12,6 +12,7 @@ from os.path import join, dirname, abspath
 sys.path.append(abspath(join(dirname(__file__), "..", "..")))
 from pyNNsMD.esp_nn import build_geom_preprocess_layer, ScaledMeanAbsoluteError, precompute_feature_in_chunks
 from pyNNsMD.layers.mlp import MLP
+from pyNNsMD.scaler.general import ScalingLayer
 
 class hpModelBuilder:
     """
@@ -94,6 +95,9 @@ class hpModelBuilder_energy_oscStr:
         interatomic_dists = np.array(geom_idx) # this is [ [0,1],[0,2],...,[83,84] ]
         geom_in, geom_prep = build_geom_preprocess_layer(self.natoms, interatomic_dists, self.norm)
 
+        # Add scaling layer
+        geom_prep = ScalingLayer(self.coords_mean, self.coords_std)(geom_prep)
+        
         if self.esp_in_traindata:
             # 2. Esp_in
             esp_in = keras.Input(shape=(self.natoms,), dtype='float32', name='esp_input')
