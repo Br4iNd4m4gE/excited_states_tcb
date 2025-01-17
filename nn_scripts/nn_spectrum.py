@@ -125,19 +125,11 @@ else:
 data = {"coords": coords_train, "esp": esp_train, "targets": targets_train}
 
 # Scaling
-geomscaler = StandardScaler()
-data["coords_mean"]   = geomscaler.fit(data["coords"].reshape(-1, 1)).mean_
-data["coords_var"]    = geomscaler.var_
-data["coords_scaled"] = (data["coords"] - data["coords_mean"]) / (data["coords_var"] ** 0.5)
-
 targetscaler = StandardScaler()
 data["targets_scaled"] = targetscaler.fit_transform(data["targets"].reshape(-1, 2))
 data["targets_mean"]   = targetscaler.mean_
 data["targets_var"]    = targetscaler.var_
 target                 = data["targets_scaled"]
-
-# Scale testdata with mean and var from traindata
-coords_test_rescaled = (coords_test - data["coords_mean"]) / (data["coords_var"] ** 0.5)
     
 # otput_spec with scaler being already fitted to energy -> Must come after scaler.fit
 output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
@@ -148,15 +140,15 @@ output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
 
 # Define x_train and y_train
 if esp_in_traindata:
-    x_train = [data["coords_scaled"], data["esp"]]
+    x_train = [data["coords"], data["esp"]]
     y_train = data["targets_scaled"]
     callbacks = [stop_early, lr_reduction]
-    y_test = [coords_test_rescaled, esp_test]
+    x_test = [coords_test, esp_test]
 else:
-    x_train = data["coords_scaled"]
+    x_train = data["coords"]
     y_train = data["targets_scaled"]
     callbacks = [stop_early]
-    y_test = coords_test_rescaled
+    x_test = coords_test
 
 
 ## 2. Hyperparameter Search
@@ -167,7 +159,7 @@ if clean_up_hpoutpath:
         shutil.rmtree(hp_out_path) # = bash's rm -rf
 
 # Initialize ModelBuilder
-model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm, data["coords_scaled"])
+model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm, data["coords"])
 
 # Perform hyperparameter search
 best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_out_path)
@@ -191,7 +183,7 @@ hp_best_epoch = np.argmin(hp_hist.history["val_loss"])
 ## 4. Evaluation
 
 # Evaluate the model
-hp_pred = hp_model.predict(y_test)
+hp_pred = hp_model.predict(x_test)
 
 # Scale the normalized prediction back to the natural scale of the data
 hp_pred_scaled = targetscaler.inverse_transform(hp_pred)
@@ -204,7 +196,7 @@ energies_eV = targets_test[:, 0] * EhtoeV
 hp_pred_scaled_eV = hp_pred_scaled[:, 0] * EhtoeV
 
 # run keras model evaluation
-hp_metrics = hp_model.evaluate(y_test, ref_scaled)
+hp_metrics = hp_model.evaluate(x_test, ref_scaled)
 
 # Output important metrics    
 print("\n\n", 20 * "-", "\n\t\tSummary\n", 20 * "-")
