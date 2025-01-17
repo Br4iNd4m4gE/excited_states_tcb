@@ -22,6 +22,7 @@ from pyNNsMD.nn_pes_src.device import set_gpu
 from pyNNsMD.utils.loss import r2_metric
 from pyNNsMD.models.hp import hpModelBuilder_energy_oscStr
 from pyNNsMD.esp_nn import OutputSpec, get_limits
+from pyNNsMD.layers.wrapper import WrapEnergyModel
 
 ############################ PARSE ARGUMENTS ##################################
 
@@ -127,10 +128,7 @@ data = {"coords": coords_train, "esp": esp_train, "targets": targets_train}
 # Scaling
 targetscaler = StandardScaler()
 data["targets_scaled"] = targetscaler.fit_transform(data["targets"].reshape(-1, 2))
-data["targets_mean"]   = targetscaler.mean_
-data["targets_var"]    = targetscaler.var_
-target                 = data["targets_scaled"]
-    
+
 # otput_spec with scaler being already fitted to energy -> Must come after scaler.fit
 output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
     "QM/MM energy" : OutputSpec(from_subnets = "monolith",
@@ -170,10 +168,14 @@ hp_model = tuner.hypermodel.build(best_hps)
 ## 3. Training best hp model
 
 # fit the models
-hp_hist = hp_model.fit(x_train, target, epochs=epochs, validation_split=0.1, verbose=2, callbacks=callbacks)
+hp_hist = hp_model.fit(x_train, data["targets_scaled"], epochs=epochs, validation_split=0.1, verbose=2, callbacks=callbacks)
+
+# Wrap the model
+wrapped_model = WrapEnergyModel(hp_model, targetscaler)
 
 # Save model
-hp_model.save(model_path)
+# hp_model.save(model_path)
+wrapped_model.save(model_path)
 
 # Get best epoch
 hp_best_epoch = np.argmin(hp_hist.history["val_loss"])

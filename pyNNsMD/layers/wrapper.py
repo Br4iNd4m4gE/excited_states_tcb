@@ -17,3 +17,17 @@ class WrapForcesModel(ks.Model):
 		outputs_rescaled = self.std * outputs + self.mean
 		tf.print("wrap", outputs.shape)
 		return outputs_rescaled
+
+class WrapEnergyModel(ks.Model):
+    """
+    Wraps the NN model for the energies + oscillator strengths.
+    """
+    def __init__(self, model, targetscaler):
+        super().__init__()
+        self.model = model
+        self.targetscaler = targetscaler
+
+    def call(self, inputs):
+        outputs = self.model(inputs)
+        outputs_rescaled = self.targetscaler.inverse_transform(outputs)
+        return outputs_rescaled
