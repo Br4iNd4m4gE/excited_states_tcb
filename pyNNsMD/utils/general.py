@@ -72,8 +72,8 @@ def generate_invd_list(tgt, rep, natom):
         invd_list =  [[i, j] for i in range(2*natom) for j in range(2*natom)]
     return invd_list
 
-def parse_single_file(file, n_atoms, cutoff=None, every_nth=1):
-    lines_per_geom = n_atoms + 2
+def parse_single_file(file, n_atoms, lines_to_skip=1, cutoff=None, every_nth=1):
+    lines_per_geom = n_atoms + lines_to_skip + 1
 
     geom_data = []
     tgt_data = []
@@ -85,7 +85,7 @@ def parse_single_file(file, n_atoms, cutoff=None, every_nth=1):
             if not all((l.strip for l in lines)):
                 print(f"end of file reached at chunk {idx}")
                 break # Whitespace at EOF
-            if cutoff is not None and idx ==cutoff:
+            if cutoff is not None and idx == cutoff:
                 print("cutoff reached")
                 break # Cutoff
             if idx % every_nth != 0:
@@ -100,9 +100,9 @@ def parse_single_file(file, n_atoms, cutoff=None, every_nth=1):
             else: 
                 tgt_data.append(tgt)
             
-            for at_idx, l in enumerate(lines[1:-1]):                    
+            for at_idx, l in enumerate(lines[1: -1]):                    
                 vals = [float(i) for i in l.split()]
-                mol_geoms[at_idx] = np.asarray(vals+[0.0]*(7-len(vals)))
+                mol_geoms[at_idx] = np.asarray(vals+[0.0] * (7 - len(vals)))
             geom_data.append(mol_geoms)
     return np.asarray(geom_data, dtype=np.float32), np.asarray(tgt_data, dtype=np.float32)
 
@@ -235,7 +235,7 @@ def load_data_excited_states_energies(inputfile, lines_to_skip):
         raise ValueError("Number of Lines incorrect.")
 
     # Read in data
-    xyz_esp_data, energies = parse_single_file(inputfile, natoms) # energies and osc. str.
+    xyz_esp_data, energies = parse_single_file(inputfile, natoms, lines_to_skip) # energies and osc. str.
 
     # Multiply coordinates by A2Bohr
     xyz_esp_data[:, :, 1:4] *= A2Bohr

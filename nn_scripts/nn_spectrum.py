@@ -174,6 +174,7 @@ wrapped_model = WrapEnergyModel(hp_model, targetscaler.mean_, targetscaler.var_)
 
 # Single prediction
 pred_wrapped = wrapped_model.predict(x_test) # you need to call the model once, before saving it
+hp_pred      = hp_model.predict(x_test)
 
 # Save model
 wrapped_model.save(model_path)
@@ -183,9 +184,6 @@ hp_best_epoch_idx = np.argmin(hp_hist.history["val_loss"])
 
 
 ## 4. Evaluation
-
-# Evaluate the model
-hp_pred = hp_model.predict(x_test)
 
 # Scale the normalized prediction back to the natural scale of the data
 hp_pred_scaled = targetscaler.inverse_transform(hp_pred)
