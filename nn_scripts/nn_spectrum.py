@@ -22,7 +22,7 @@ from pyNNsMD.nn_pes_src.device import set_gpu
 from pyNNsMD.utils.loss import r2_metric
 from pyNNsMD.models.hp import hpModelBuilder_energy_oscStr
 from pyNNsMD.esp_nn import OutputSpec, get_limits
-from pyNNsMD.layers.wrapper import WrapEnergyModel
+from pyNNsMD.layers.wrapper import WrapEnergyModel, WrapForcesModel
 
 ############################ PARSE ARGUMENTS ##################################
 
@@ -113,7 +113,7 @@ ntrain = int(ntotal * trainPercentage)
 coords_train, esp_grads_train, targets_train, coords_test, esp_grads_test, targets_test = shuffle_and_split_train_test(xyz_esp_data, energies, ntrain)
 
 # Extract ESP data
-esp_train = esp_grads_train[:, :, 0] # esp_tmp can include esp + esp_grads
+esp_train = esp_grads_train[:, :, 0] # esp_grads_train can include esp + esp_grads; esp_grads_train[:, :, 0] extracts only esp
 esp_test  = esp_grads_test[:, :, 0]
 
 # Check whether ESP data is included in the training data
@@ -173,8 +173,18 @@ hp_hist = hp_model.fit(x_train, data["targets_scaled"], epochs=epochs, validatio
 # Wrap the model
 wrapped_model = WrapEnergyModel(hp_model, targetscaler)
 
+# Bugtesting
+# pred = hp_model.predict(x_test)
+# print("pred shape: ", pred.shape)
+# pred_wrapped = wrapped_model(x_test)
+# print("pred_wrapped shape: ", pred_wrapped.shape)
+print("Model Summary:")
+wrapped_model.model.summary()
+print("Model Input Shape:", wrapped_model.model.input_shape)
+print("Model Output Shape:", wrapped_model.model.output_shape)
+print("Model Configuration:", wrapped_model.model.get_config())
+
 # Save model
-# hp_model.save(model_path)
 wrapped_model.save(model_path)
 
 # Save the scaler
@@ -199,7 +209,7 @@ ref_scaled = targetscaler.transform(targets_test.reshape(-1,2))
 energies_eV = targets_test[:, 0] * EhtoeV
 hp_pred_scaled_eV = hp_pred_scaled[:, 0] * EhtoeV
 
-# run keras model evaluation
+# Evaluate model
 hp_metrics = hp_model.evaluate(x_test, ref_scaled)
 
 # Output important metrics    
@@ -264,8 +274,8 @@ fig.savefig(join(model_path, "scatter.png"), dpi=300)
 plt.clf()
 fig, ax = plt.subplots(1, figsize=(6,6))
 ax.hist2d(targets_test[:, 1], hp_pred_scaled[:, 1],
-                bins=1000, # Just for Tests; Mila wrote 1000
-                cmin=1, # Just for Tests; Mila wrote 1 
+                bins=1000,
+                cmin=1,
                 norm=mcolors.PowerNorm(0.5))
 b, t = get_limits([targets_test[:, 1], hp_pred_scaled[:, 1]])
 ax.set_xlabel("reference")
