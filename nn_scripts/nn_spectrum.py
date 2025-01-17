@@ -177,6 +177,9 @@ wrapped_model = WrapEnergyModel(hp_model, targetscaler)
 # hp_model.save(model_path)
 wrapped_model.save(model_path)
 
+# Save the scaler
+joblib.dump(targetscaler, "scaler.pkl")
+
 # Get best epoch
 hp_best_epoch = np.argmin(hp_hist.history["val_loss"])
 
@@ -272,18 +275,3 @@ ax.set_ylim((b, t))
 opti_ref = np.linspace(b, t, num=10)
 ax.plot(opti_ref, opti_ref, c="C1")
 fig.savefig(join(model_path, "scatter_osc.png"), dpi=300)
-
-# save scaling parameters to GROMACS readable format
-hypers = [
-    data["coords_mean"][0], 
-    (data["coords_var"] ** 0.5)[0], 
-    data["targets_mean"][0], 
-    (data["targets_var"] ** 0.5)[0], 
-    data["targets_mean"][1], 
-    (data["targets_var"] ** 0.5)[1],
-    (0,0) # no gradients
-    ]
-
-with open(os.path.join(model_path, "params.txt"), "w") as outf:
-    for k in hypers:
-        outf.write(f"{k}\n")
