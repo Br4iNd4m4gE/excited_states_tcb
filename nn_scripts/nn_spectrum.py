@@ -8,6 +8,7 @@ import shutil
 import joblib
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import tensorflow as tf
 import tensorflow.keras as ks
 import matplotlib as mpl
 mpl.use('Agg')
@@ -171,20 +172,14 @@ hp_model = tuner.hypermodel.build(best_hps)
 hp_hist = hp_model.fit(x_train, data["targets_scaled"], epochs=epochs, validation_split=0.1, verbose=2, callbacks=callbacks)
 
 # Wrap the model
-wrapped_model = WrapEnergyModel(hp_model, targetscaler)
+# wrapped_model = WrapEnergyModel(hp_model, targetscaler)
+scaler_mean, scaler_var = tf.convert_to_tensor(targetscaler.mean_, dtype=tf.float32), tf.convert_to_tensor(targetscaler.var_, dtype=tf.float32)
+# wrapped_model = WrapEnergyModel(hp_model, scaler_mean, scaler_var)
+print(targetscaler.mean_.shape, targetscaler.var_.shape)
+wrapped_model = WrapEnergyModel(hp_model, targetscaler.mean_, targetscaler.var_)
 
-# Bugtesting
-print("Model HP MODEL Summary:")
-hp_model.summary()
-print("Model Input Shape:", hp_model.input_shape)
-print("Model Output Shape:", hp_model.output_shape)
-# print("Model Configuration:", hp_model.get_config())
-print(20 * "-")
-print("Model WRAPPED MODEL Summary:")
-wrapped_model.model.summary()
-print("Model Input Shape:", wrapped_model.model.input_shape)
-print("Model Output Shape:", wrapped_model.model.output_shape)
-# print("Model Configuration:", wrapped_model.model.get_config())
+# Single prediction
+pred = wrapped_model.predict(x_train)
 
 # Save model
 wrapped_model.save(model_path)

@@ -18,16 +18,29 @@ class WrapForcesModel(ks.Model):
 		tf.print("wrap", outputs.shape)
 		return outputs_rescaled
 
+	def get_config(self):
+		config = super().get_config().copy()
+		return config
+
 class WrapEnergyModel(ks.Model):
     """
     Wraps the NN model for the energies + oscillator strengths.
     """
-    def __init__(self, model, targetscaler):
+    def __init__(self, model, mean, var):
         super().__init__()
-        self.model = model
-        self.targetscaler = targetscaler
+        self.submodel = model
+        self.mean = tf.convert_to_tensor(mean, dtype=tf.float32)
+        self.std = tf.convert_to_tensor(var, dtype=tf.float32)
 
     def call(self, inputs):
-        outputs = self.model(inputs)
-        outputs_rescaled = self.targetscaler.inverse_transform(outputs)
+        outputs = self.submodel(inputs)
+        outputs_rescaled = self.std * outputs + self.mean
         return outputs_rescaled
+    
+    # def build(self, input_shape):
+    #     self.submodel.build(input_shape)
+    #     super().build(input_shape)
+    
+    def get_config(self):
+        config = super().get_config().copy()
+        return config
