@@ -266,7 +266,7 @@ ax.plot(opti_ref, opti_ref, c="C1")
 fig.savefig(join(model_path, "scatter.png"), dpi=300)
 plt.clf()
 fig, ax = plt.subplots(1, figsize=(6,6))
-ax.hist2d(targets_test[:, 1], model_pred_eV[:, 1],
+ax.hist2d(osc_ref, osc_pred,
                 bins=1000,
                 cmin=1,
                 norm=mcolors.PowerNorm(0.5))
