@@ -18,5 +18,8 @@
     "hp_learning_rates": [1e-3, 5e-4, 1e-4, 5e-5],
 
     "hp_epochs": 20,
-    "hp_factor": 2
+    "hp_factor": 2,
+
+    "best_hp_model_name": "best_model",
+    "hp_out_name": "outputtuner"
 }

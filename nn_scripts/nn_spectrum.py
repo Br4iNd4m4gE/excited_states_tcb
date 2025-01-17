@@ -61,6 +61,10 @@ hp_dict = {
     "learning_rates": config.get("hp_learning_rates", [1e-3, 5e-4, 1e-4, 5e-5]),
 }
 
+# Foldernames
+best_hp_model_name = config.get("best_hp_model_name", "best_model")
+hp_out_name        = config.get("hp_out_name", "outputtuner")
+
 ############################ PARAMETERS ##################################
 
 # Normalization of geometries
@@ -71,9 +75,9 @@ clean_up_hpoutpath = True # delete hp_out_path before tuning (catch some errors 
 
 # Paths and output
 inputfile = args.file
-outpath = os.getcwd() # Working directory
-model_path = join(outpath, "best_model") # for model, params, unused indices 
-hp_out_path = join(outpath, "outputtuner") # save tuner trials
+outpath     = os.getcwd() # Working directory
+model_path  = join(outpath, best_hp_model_name) # for model, params, unused indices 
+hp_out_path = join(outpath, hp_out_name) # save tuner trials
 
 # Callbacks for training the model
 stop_early = ks.callbacks.EarlyStopping(monitor='val_loss', # which quantity to monitor
@@ -93,7 +97,7 @@ lr_reduction = ks.callbacks.ReduceLROnPlateau(
     min_lr=1e-6)
 
 # Constants
-EhtoeV, A2Bohr = unit_conversions["EhtoeV"], unit_conversions["A2Bohr"]
+EhtoeV = unit_conversions["EhtoeV"]
 
 ############################ START OF SCRIPT ##################################
 
@@ -167,10 +171,6 @@ model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, esp_in_traindata, 
 
 # Perform hyperparameter search
 best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_out_path)
-
-# print("------------------------------------------")
-# print(f'''{best_hps.get("neurons")} neurons, {best_hps.get("layers")} layers, {best_hps.get("loss_ratio")} loss ratio, {best_hps.get("initial_lr")} initial learning rate and {best_hps.get("l2_penalty")} regulization penalty give the best results''')
-# print("------------------------------------------")
 
 # Build and train the best model
 hp_model = tuner.hypermodel.build(best_hps)

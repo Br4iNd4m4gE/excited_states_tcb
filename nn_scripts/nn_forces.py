@@ -67,7 +67,7 @@ hp_dict   = {
 inputfile = args.file
 
 # Constants and Initializations
-AtoBohr, HaB_to_eVA = unit_conversions["A2Bohr"], unit_conversions["HaB_to_eVA"]
+HaB_to_eVA = unit_conversions["HaB_to_eVA"]
 
 stop_early = tf.keras.callbacks.EarlyStopping(
     monitor = 'val_loss',
