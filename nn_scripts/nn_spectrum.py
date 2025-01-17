@@ -172,9 +172,8 @@ hp_hist = hp_model.fit(x_train, data["targets_scaled"], epochs=epochs, validatio
 # Wrap the model
 wrapped_model = WrapEnergyModel(hp_model, targetscaler.mean_, targetscaler.var_)
 
-# Single prediction
-pred_wrapped = wrapped_model.predict(x_test) # you need to call the model once, before saving it
-hp_pred      = hp_model.predict(x_test)
+# Single prediction (wrapped model returns the scaled back values in energy + oscillator strength)
+model_pred = wrapped_model.predict(x_test) # you need to call the model once, before saving it
 
 # Save model
 wrapped_model.save(model_path)
@@ -183,30 +182,35 @@ wrapped_model.save(model_path)
 hp_best_epoch_idx = np.argmin(hp_hist.history["val_loss"])
 
 
-## 4. Evaluation
-
-# Scale the normalized prediction back to the natural scale of the data
-hp_pred_scaled = targetscaler.inverse_transform(hp_pred)
-
-# Scale the references for the test data to the normalized scale for evaluation
-ref_scaled = targetscaler.transform(targets_test.reshape(-1,2))
+## 4. Evaluation of the model (stored in train.out)
 
 # Get rescaled predictions in eV
-energies_eV = targets_test[:, 0] * EhtoeV
-hp_pred_scaled_eV = hp_pred_scaled[:, 0] * EhtoeV
+model_pred_eV   = model_pred[:, 0]   * EhtoeV
+energies_ref_eV = targets_test[:, 0] * EhtoeV
 
-# Evaluate model
+# Get oscillator strenghts
+osc_pred = model_pred[:, 1]
+osc_ref  = targets_test[:, 1]
+
+# Calculate MAE
+test_mae_eV  = mean_absolute_error(energies_ref_eV, model_pred_eV)
+test_mae_osc = mean_absolute_error(osc_ref, osc_pred)
+
+# Evaluate (scaled) model -> the model without the wrapper (true performance of model)
+ref_scaled = targetscaler.transform(targets_test.reshape(-1,2))
 hp_metrics = hp_model.evaluate(x_test, ref_scaled)
 
-# Output important metrics
-print("\n\n", 20 * "-", "\n\t\tSummary\n", 20 * "-")
-print("\n\tHP search lead to:\n", best_hps.get_config()["values"])
+# Get best hyperparameters
+best_hps_config_str = "\n".join([f"{key}: {value}" for key, value in best_hps.get_config()["values"].items()])
 
-print("\n\tPerformance of HP model:")
-test_mae_eV = mean_absolute_error(energies_eV, hp_pred_scaled_eV)
-test_mae_osc = mean_absolute_error(targets_test[:, 1], hp_pred_scaled[:, 1])
+# Print performance metrics in train.out
+print("\n\n", 70 * "-", "\n\t\t\t\t\t\t\t\tSummary\n", 70 * "-")
+print("\n\t> Result of HP search")
+print(best_hps_config_str)
+
+print("\n\t> Performance of final model")
 print("test loss: ", hp_metrics[0])
-print("test MAE (eV): ", test_mae_eV)
+print("test MAE [eV]: ", test_mae_eV)
 print("test MAE osc: ", test_mae_osc)
 print("test R2: ", hp_metrics[2])
 print("full metrics: ", hp_metrics)
@@ -218,11 +222,11 @@ print("---")
 print("best val loss (atomic): ", hp_hist.history["val_loss"][hp_best_epoch_idx])
 print("best val R2: ", hp_hist.history["val_r2_metric"][hp_best_epoch_idx])
 
-# Save energies to plot scatters
-np.savetxt(join(model_path, 'hp_ref_energies_eV.dat'), energies_eV)
-np.savetxt(join(model_path, 'hp_ref_osc.dat'), targets_train[:, 1])
-np.savetxt(join(model_path, 'hp_predicted_energies_eV.dat'), hp_pred_scaled_eV)
-np.savetxt(join(model_path, 'hp_predicted_osc.dat'), hp_pred_scaled[:,1])
+# Save data of energies and oscillator strengths of predictions and references
+np.savetxt(join(model_path, 'model_ref_energies_eV.dat'),       energies_ref_eV)
+np.savetxt(join(model_path, 'model_predicted_energies_eV.dat'), model_pred_eV)
+np.savetxt(join(model_path, 'model_ref_osc.dat'),               osc_ref)
+np.savetxt(join(model_path, 'model_predicted_osc.dat'),         osc_pred)
 
 
 ## 5. Plotting
@@ -241,11 +245,11 @@ f.savefig(join(model_path, "test-loss.png"), dpi=300)
 
 # Plot Scatter
 fig, ax = plt.subplots(1, figsize=(6,6))
-ax.hist2d(energies_eV, hp_pred_scaled_eV.flatten(),
+ax.hist2d(energies_ref_eV, model_pred_eV.flatten(),
                 bins=1000,
                 cmin=1,
                 norm=mcolors.PowerNorm(0.5))
-b,t = get_limits([energies_eV, hp_pred_scaled_eV])
+b,t = get_limits([energies_ref_eV, model_pred_eV])
 ax.set_xlabel("reference (eV)")
 ax.set_ylabel("prediction (eV)")
 ax.set_aspect("equal")
@@ -255,11 +259,11 @@ ax.plot(opti_ref, opti_ref, c="C1")
 fig.savefig(join(model_path, "scatter.png"), dpi=300)
 plt.clf()
 fig, ax = plt.subplots(1, figsize=(6,6))
-ax.hist2d(targets_test[:, 1], hp_pred_scaled[:, 1],
+ax.hist2d(targets_test[:, 1], model_pred_eV[:, 1],
                 bins=1000,
                 cmin=1,
                 norm=mcolors.PowerNorm(0.5))
-b, t = get_limits([targets_test[:, 1], hp_pred_scaled[:, 1]])
+b, t = get_limits([targets_test[:, 1], model_pred_eV[:, 1]])
 ax.set_xlabel("reference")
 ax.set_ylabel("prediction")
 ax.set_aspect("equal")
