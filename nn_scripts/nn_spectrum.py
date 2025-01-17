@@ -215,7 +215,7 @@ print("\n\t> Properties of final model")
 print(best_hps_config_str)
 
 print("\n\t> Performance of final model")
-print("test loss [atomic]: ", hp_metrics[0])
+print("test loss [atomic units]: ", hp_metrics[0])
 print("test MAE energy [eV]: ", test_mae_eV)
 print("test MAE osc: ", test_mae_osc)
 print("test R2 energy: ", R2_energy)
@@ -223,10 +223,10 @@ print("test R2 osc: ", R2_osc)
 print("test R2 (combined): ", R2_total)
 print("best epoch: ", hp_best_epoch_idx)
 print("-----")
-print("best train loss [atomic]: ", hp_hist.history["loss"][hp_best_epoch_idx])
+print("best train loss [atomic units]: ", hp_hist.history["loss"][hp_best_epoch_idx])
 print("best train R2 (combined): ", hp_hist.history["r2_metric"][hp_best_epoch_idx])
 print("-----")
-print("best val loss [atomic]: ", hp_hist.history["val_loss"][hp_best_epoch_idx])
+print("best val loss [atomic units]: ", hp_hist.history["val_loss"][hp_best_epoch_idx])
 print("best val R2 (combined): ", hp_hist.history["val_r2_metric"][hp_best_epoch_idx])
 
 # Save data of energies and oscillator strengths of predictions and references
@@ -248,9 +248,9 @@ ax.plot(hp_best_epoch_idx, hp_hist.history["val_loss"][hp_best_epoch_idx], ls=""
 ax.axvline(x=hp_best_epoch_idx, color="gray", ls="--")
 ax.axhline(y=hp_hist.history["val_loss"][hp_best_epoch_idx], color="gray", ls="--")
 ax.legend()
-f.savefig(join(model_path, "test-loss.png"), dpi=300)
+f.savefig(join(model_path, "test_loss.png"), dpi=300)
 
-# Plot Scatter
+# Plot Scatter Energies
 fig, ax = plt.subplots(1, figsize=(6,6))
 ax.hist2d(energies_ref_eV, model_pred_eV.flatten(),
                 bins=1000,
@@ -265,6 +265,8 @@ opti_ref = np.linspace(b,t,num=10)
 ax.plot(opti_ref, opti_ref, c="C1")
 fig.savefig(join(model_path, "scatter.png"), dpi=300)
 plt.clf()
+
+# Plot Scatter Oscillator Strengths
 fig, ax = plt.subplots(1, figsize=(6,6))
 ax.hist2d(osc_ref, osc_pred,
                 bins=1000,
