@@ -163,7 +163,7 @@ if clean_up_hpoutpath:
         shutil.rmtree(hp_out_path) # = bash's rm -rf
 
 # Initialize ModelBuilder
-model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm)
+model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm, data["coords_scaled"])
 
 # Perform hyperparameter search
 best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_out_path)
@@ -178,11 +178,11 @@ hp_model = tuner.hypermodel.build(best_hps)
 
 ## 3. Training best hp model
 
-# Set normalization layer to the inverse distances
-# The layer calculating inverse distances ist the first layer of the model. The result of this layer is used to fit the normalization layer (x -> x-µ/std).
-# Basically a normalization layer is fitted to the inverse distances.
-feat_precomp = precompute_feature_in_chunks(data["coords_scaled"], hp_model, batch_size=32)  # calculates the inverse distances (features = output of first layer)
-set_const_normalization_from_features(feat_precomp, hp_model) # set the normalization layer to the inverse distances
+# # Set normalization layer to the inverse distances
+# # The layer calculating inverse distances ist the first layer of the model. The result of this layer is used to fit the normalization layer (x -> x-µ/std).
+# # Basically a normalization layer is fitted to the inverse distances.
+# feat_precomp = precompute_feature_in_chunks(data["coords_scaled"], hp_model, batch_size=32)  # calculates the inverse distances (features = output of first layer)
+# set_const_normalization_from_features(feat_precomp, hp_model) # set the normalization layer to the inverse distances
 
 # fit the models
 hp_hist = hp_model.fit(x_train, target, epochs=epochs, validation_split=0.1, verbose=2, callbacks=callbacks)

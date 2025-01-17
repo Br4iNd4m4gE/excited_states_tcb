@@ -10,7 +10,7 @@ from itertools import combinations
 from os.path import join, dirname, abspath
 
 sys.path.append(abspath(join(dirname(__file__), "..", "..")))
-from pyNNsMD.esp_nn import build_geom_preprocess_layer, ScaledMeanAbsoluteError
+from pyNNsMD.esp_nn import build_geom_preprocess_layer, ScaledMeanAbsoluteError, precompute_feature_in_chunks
 from pyNNsMD.layers.mlp import MLP
 
 class hpModelBuilder:
@@ -59,7 +59,7 @@ class hpModelBuilder_energy_oscStr:
     """
     Class for HP search for energy + oscillator strength NN.
     """
-    def __init__(self, hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss, r2_metric, norm):
+    def __init__(self, hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss, r2_metric, norm, coords_scaled):
         self.hp_dict = hp_dict
         self.natoms = natoms
         self.esp_in_traindata = esp_in_traindata
@@ -69,6 +69,19 @@ class hpModelBuilder_energy_oscStr:
         self.loss = loss
         self.r2_metric = r2_metric
         self.norm = norm
+
+        # Precompute normalization parameters (for normalization of inv distance layer)
+        feat_precomp = precompute_feature_in_chunks(coords_scaled, self.build_initial_model(), batch_size=32)
+        self.feat_x_mean = np.mean(feat_precomp, axis=0, keepdims=True) # inv distance mean
+        self.feat_x_std = np.std(feat_precomp, axis=0, keepdims=True)
+
+    def build_initial_model(self):
+        """ Build an initial model to precompute features for normalization. """
+        geom_idx = [(i,j) for i,j in combinations(range(self.natoms), 2)]
+        interatomic_dists = np.array(geom_idx)
+        geom_in, geom_prep = build_geom_preprocess_layer(self.natoms, interatomic_dists, self.norm)
+        model = keras.Model(inputs=geom_in, outputs=geom_prep)
+        return model
 
     def build_model(self, hp):
         """ Building up the esp-model for hyperparametersearch. This is a modified 
@@ -127,6 +140,9 @@ class hpModelBuilder_energy_oscStr:
                 
         # 8. Compile model
         model.compile(optimizer=opti, loss=self.loss, metrics=[[mae, self.r2_metric] for mae in maes]) # for history and tuning
+
+        # 9. Set normalization parameters
+        model.get_layer('feat_std').set_weights([self.feat_x_mean, self.feat_x_std])
         return model
     
     def perform_hp_search(self, x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_outpath):
