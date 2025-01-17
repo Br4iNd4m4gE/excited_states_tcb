@@ -207,7 +207,7 @@ hp_pred_scaled_eV = hp_pred_scaled[:, 0] * EhtoeV
 hp_metrics = hp_model.evaluate(y_test, ref_scaled)
 
 # Output important metrics    
-print("\n\n", 22 * "-", "\n\t\tSummary\n", 22 * "-")
+print("\n\n", 20 * "-", "\n\t\tSummary\n", 20 * "-")
 print("\n\tHP search lead to:\n", best_hps.get_config()["values"])
 
 print("\n\tPerformance of HP model:")
@@ -227,7 +227,7 @@ print("best val loss (atomic): ", hp_hist.history["val_loss"][hp_best_epoch])
 print("best val R2: ", hp_hist.history["val_r2_metric"][hp_best_epoch])
 
 # Save results
-plt.hist(energies[:,1],bins=20)
+plt.hist(energies[:,1], bins=20)
 plt.savefig(join(outpath, "osc_distribution_last.png"), dpi=300)
 
 # Save energies to plot scatters
@@ -280,7 +280,7 @@ opti_ref = np.linspace(b, t, num=10)
 ax.plot(opti_ref, opti_ref, c="C1")
 fig.savefig(join(model_path, "scatter_osc.png"), dpi=300)
 
-# save scaling parameters to GROMACS-readable format
+# save scaling parameters to GROMACS readable format
 hypers = [
     data["coords_mean"][0], 
     (data["coords_var"] ** 0.5)[0], 
@@ -289,7 +289,6 @@ hypers = [
     data["targets_mean"][1], 
     (data["targets_var"] ** 0.5)[1],
     (0,0) # no gradients
-    
     ]
 
 with open(os.path.join(model_path, "params.txt"), "w") as outf:
