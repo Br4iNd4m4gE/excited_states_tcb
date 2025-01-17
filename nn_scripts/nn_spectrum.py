@@ -178,15 +178,14 @@ hp_model = tuner.hypermodel.build(best_hps)
 
 ## 3. Training best hp model
 
-# pre-calculate geometries to fit the feat_std layers for normalizing inv.dists
-feat_precomp = precompute_feature_in_chunks(data["coords_scaled"], hp_model, batch_size=32)  # changed for test
-# now the scaler of feat_std layer must be set. So weights and biases of this
-# layer must be so that x -> x-µ/std
-set_const_normalization_from_features(feat_precomp, hp_model)
+# Set normalization layer to the inverse distances
+# The layer calculating inverse distances ist the first layer of the model. The result of this layer is used to fit the normalization layer (x -> x-µ/std).
+# Basically a normalization layer is fitted to the inverse distances.
+feat_precomp = precompute_feature_in_chunks(data["coords_scaled"], hp_model, batch_size=32)  # calculates the inverse distances (features = output of first layer)
+set_const_normalization_from_features(feat_precomp, hp_model) # set the normalization layer to the inverse distances
 
 # fit the models
-hp_hist = hp_model.fit(x_train, target, epochs=epochs,
-                     validation_split=0.1, verbose=2, callbacks=callbacks)
+hp_hist = hp_model.fit(x_train, target, epochs=epochs, validation_split=0.1, verbose=2, callbacks=callbacks)
 
 # Save model
 hp_model.save(model_path)

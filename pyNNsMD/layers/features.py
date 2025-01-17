@@ -225,7 +225,7 @@ class Dihedral(ks.layers.Layer):
 
 class FeatureGeometric(ks.layers.Layer):
     """
-    Feautre representation consisting of inverse distances, angles and dihedral angles.
+    Feature representation consisting of inverse distances, angles and dihedral angles.
     
     Uses InverseDistance, Angle, Dihydral layer definition if input index is not empty.
     
