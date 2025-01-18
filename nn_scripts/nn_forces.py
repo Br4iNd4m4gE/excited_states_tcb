@@ -117,9 +117,6 @@ scaler.fit(y_train)
 scaler.mean_[1:] = 0 # no shift of forces
 y_train_scaled, y_test_scaled = scaler.transform(y_train), scaler.transform(y_test)
 
-# Get the standard deviation of the forces
-force_std = np.mean(np.std(y_train[:, 1:]))
-
 
 ## 2. Hyperparameter search
 
@@ -158,31 +155,30 @@ mlmm_model.save("mlmm_model")
 joblib.dump(scaler, "scaler.pkl")
 
 
-# Get ?????????
-losses = hist.history["loss"]
-val_losses = hist.history["val_loss"]
-# eval = best_model.evaluate(x_test, y_test_scaled)
-print("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-print(best_model(x_test).shape, x_test.shape, y_test_scaled.shape)
-
-
 ## 4. Evaluation of the model (stored in train.out)
 
-#Print Performance
+# Rescale the predictions
 forces_pred = K.flatten(test_pred_rescaled[:, 1:])
 forces_test = K.flatten(y_test[:, 1:])
-print("R2 Total Energy:")
-print(r2_score(y_test[:, 0], test_pred_rescaled[:, 0]))
-print("MAE Total Energy:")
+
+# Calculate R2 and MAE
 mae_te = mean_absolute_error(y_test[:, 0], test_pred_rescaled[:, 0])
-print(mae_te, ' eV')
-print("R2 Forces:")
-print(r2_score(forces_test, forces_pred))
-print("MAE Forces:")
 mae_forces = mean_absolute_error(forces_test, forces_pred)
-print(mae_forces, ' eV/A')
-print("MAE Forces/STD Forces in %:")
-print(100 * mae_forces / force_std)
+
+# Get the standard deviation of the forces
+force_std = np.mean(np.std(y_train[:, 1:]))
+
+# Get the loss curves
+losses = hist.history["loss"]
+val_losses = hist.history["val_loss"]
+
+# Print results in train.out
+print("R2 Total Energy: ", r2_score(y_test[:, 0], test_pred_rescaled[:, 0]))
+print("MAE Total Energy: ", mae_te, ' eV')
+print("-----")
+print("R2 Forces: ", r2_score(forces_test, forces_pred))
+print("MAE Forces: ", mae_forces, ' eV/A')
+print("MAE Forces/STD Forces in %: ", 100 * mae_forces / force_std)
 
 # Save predictions and references for test data
 np.savetxt("energy_predictions.txt", test_pred_rescaled[:, 0])
@@ -190,10 +186,12 @@ np.savetxt("force_predictions.txt", forces_pred)
 np.savetxt("energy_ref.txt", y_test[:, 0])
 np.savetxt("force_ref.txt", forces_test)
 
-#Plot
-#Loss curve
+
+## 5. Plotting
+
+# Loss curve
 ep = np.arange(1, len(losses) + 1)
-plt.semilogy(ep,losses, label="loss")
+plt.semilogy(ep, losses, label="loss")
 plt.semilogy(ep, val_losses, label="val_loss")
 plt.legend()
 plt.xlabel("Epochs")

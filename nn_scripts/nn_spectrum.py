@@ -237,6 +237,7 @@ np.savetxt(join(model_path, 'model_predicted_osc.dat'), osc_pred)
 
 
 ## 5. Plotting
+
 # Plot training progress
 f, ax = plt.subplots(1, figsize=(6,6))
 ax.plot(np.arange(len(hp_hist.history["loss"])), hp_hist.history["loss"], label="training loss")
