@@ -33,13 +33,12 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 keep_energy_and_osc = args.save # you want energy and osc. str. saved in separate files
 parent_path = os.getcwd() # path for evaluation
 data_path = args.file
-natoms = extract_number_of_atoms(data_path)
-print(f"Number of atoms: {natoms}")
+lines_to_skip = 1 # modular via argparse
 
 ## Load model
 # If model name is given as argument, use this model
 model_path = args.model
-print(f"Model Path: {model_path}")
+print(f"Model Path: {abspath(model_path)}")
 
 # Load model (iput: coords in Bohr and ESP in Hartree; output: energy in Hartree and oscillator strength)
 model = tf.saved_model.load(model_path)
@@ -47,32 +46,31 @@ model = tf.saved_model.load(model_path)
 # Load unit conversions
 A2Bohr, EhtoeV, ehtonm = unit_conversions["A2Bohr"], unit_conversions["EhtoeV"], unit_conversions["ehtonm"]
 
+# Load Stuff
+natoms = extract_number_of_atoms(data_path, lines_to_skip)
+print(f"Number of atoms: {natoms} within a single molecule.")
+
 # Determine size of the data used for all solvents, by searching for the smallest file
-size = None
 linestotal = get_file_length(data_path)
-ntotal = linestotal / (natoms + 1)
+ntotal = linestotal / (natoms + lines_to_skip + 1)
 if not ntotal.is_integer():
     raise ValueError("Number of Lines incorrect.")
-data_size = int(ntotal)
-size = data_size
- 
-# get number of molecules
-result = subprocess.run(['wc', '-l', data_path], capture_output=True, text=True)
-max_n_molecules = int(result.stdout.split()[0])
-max_n_molecules /= natoms + 1
 
-##### 1. Data extraction
-# load data
+ntotal = int(ntotal)
+
+## 1. Load data
 print("loading")
-xyz_data = np.zeros((size, natoms, 4))
+xyz_data = np.zeros((ntotal, natoms, 4))
+
 # Read xyz data and ESP
 with open(data_path, "r") as data:
-	for i in range(size):
-		if i > max_n_molecules:
-			raise ValueError("Something went horribly wrong. Look in the Code!")  # if size of data is smaller than the "size" variable
-		for j in range(natoms):
+	for i in range(ntotal):
+		for j in range(natoms + lines_to_skip):
 			line = data.readline()
-			xyz_data[i, j] = [float(x) for x in line.split()[1:]]
+			if lines_to_skip != 0: # skip comment lines in data (in case of e.g. energy line)
+				if j < lines_to_skip:
+					continue
+			xyz_data[i, j - lines_to_skip] = [float(x) for x in line.split()[1:]]
 		data.readline()
 print("loaded")
 
@@ -82,7 +80,11 @@ xyz_data = np.asarray(xyz_data, dtype=np.float32)
 coords = xyz_data[:,:,:3] * A2Bohr
 esp    = xyz_data[:,:,3]
 
-x_data = [coords, esp]
+x_data = (coords, esp)
+
+# print(coords.shape, esp.shape)
+# print(coords[0])
+# print(esp[0])
 
 # Predict energy and oscillator strength
 pred = model(x_data)
