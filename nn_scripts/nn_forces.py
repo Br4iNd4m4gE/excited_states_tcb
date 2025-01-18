@@ -91,25 +91,29 @@ x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_
 x_train, y_train, x_test, y_test = tf.convert_to_tensor(x_train), tf.convert_to_tensor(y_train), tf.convert_to_tensor(x_test), tf.convert_to_tensor(y_test)
 
 # Get mask to filter large distances, scale output data and get input mean and variance for Normalization
-first_preprocessor   = FirstInverseDistance()
-dummy, full_mask     = first_preprocessor(x_train)	#fullmask has True or False values for all distance checks in all samples
-reduced_mask         = tf.math.reduce_all(full_mask,0)	#if the distance is below a cutoff for all samples that distance is always considered
-preprocessor         = InverseDistance(reduced_mask)	#initialize inverse distance and filtering layer
+first_preprocessor = FirstInverseDistance()
+_, full_mask = first_preprocessor(x_train)	#fullmask has True or False values for all distance checks in all samples
+reduced_mask = tf.math.reduce_all(full_mask, 0)	#if the distance is below a cutoff for all samples that distance is always considered
+#initialize inverse distance and filtering layer
+preprocessor         = InverseDistance(reduced_mask)  # needed later
 xtrain_dist          = preprocessor(x_train)
 dist_shape           = np.shape(xtrain_dist)
 x_train_dist_mean    = np.mean(xtrain_dist, 0)
-dist_mean            = np.mean(x_train_dist_mean[:-n_atoms])	#different means for inverse distances and ESP
+#different means for inverse distances and ESP
+dist_mean            = np.mean(x_train_dist_mean[:-n_atoms])
 esp_mean             = np.mean(x_train_dist_mean[-n_atoms:])
 norm_mean            = np.ones(dist_shape[1])
 norm_mean[:-n_atoms] = dist_mean * norm_mean[:-n_atoms]
 norm_mean[-n_atoms:] = esp_mean * norm_mean[-n_atoms:]
 x_train_dist_var     = np.var(xtrain_dist, 0)
-dist_var             = np.mean(x_train_dist_var[:-n_atoms])	#different means for inverse distances and ESP
+#different means for inverse distances and ESP
+dist_var             = np.mean(x_train_dist_var[:-n_atoms])
 esp_var              = np.mean(x_train_dist_var[-n_atoms:])
 norm_var             = np.ones(dist_shape[1])
 norm_var[:-n_atoms]  = dist_var * norm_var[:-n_atoms]
 norm_var[-n_atoms:]  = esp_var * norm_var[-n_atoms:]
-normalizer           = NormalizationLayer(norm_mean, norm_var)	#initialize normalization layer
+#initialize normalization layer
+normalizer           = NormalizationLayer(norm_mean, norm_var) # needed later
 
 # Scale the output data
 scaler = StandardScaler(with_std=False)	#without std the performance was better, distribution is already good apparently

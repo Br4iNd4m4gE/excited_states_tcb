@@ -7,8 +7,10 @@ class InverseDistance(ks.layers.Layer): #taken from Milas code, added ESP and ma
 	def __init__(self,mask1):
 		super(InverseDistance,self).__init__()
 		self.mask1 = mask1	#this mask filters large distances and reduces the inpu the dimension
+
 	def build(self,input_shape):
 		super(InverseDistance,self).build(input_shape)
+
 	def call(self,inputs):
 		coords = inputs[:,:,:3]
 		esp = inputs[:,:,3]
@@ -31,11 +33,14 @@ class InverseDistance(ks.layers.Layer): #taken from Milas code, added ESP and ma
 		out = K.concatenate((out,esp),axis=-1)
 		return out
 
+
 class FirstInverseDistance(ks.layers.Layer): #to generate mask1 that filters large distances from input
 	def __init__(self):
 		super(FirstInverseDistance,self).__init__()
+
 	def build(self,input_shape):
 		super(FirstInverseDistance,self).build(input_shape)
+
 	def call(self,inputs):
 		coords = inputs[:,:,:3]
 		esp = inputs[:,:,3]
