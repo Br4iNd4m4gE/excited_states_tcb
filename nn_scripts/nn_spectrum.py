@@ -160,13 +160,13 @@ model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, esp_in_traindata, 
 # Perform hyperparameter search
 best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_out_path)
 
-# Build and train the best model
-hp_model = tuner.hypermodel.build(best_hps)
-
 
 ## 3. Training best hp model
 
-# fit the models
+# Build the best model
+hp_model = tuner.hypermodel.build(best_hps)
+
+# Train the best model
 hp_hist = hp_model.fit(x_train, data["targets_scaled"], epochs=epochs, validation_split=0.1, verbose=2, callbacks=callbacks)
 
 # Wrap the model
@@ -230,10 +230,10 @@ print("best val loss [atomic units]: ", hp_hist.history["val_loss"][hp_best_epoc
 print("best val R2 (combined): ", hp_hist.history["val_r2_metric"][hp_best_epoch_idx])
 
 # Save data of energies and oscillator strengths of predictions and references
-np.savetxt(join(model_path, 'model_ref_energies_eV.dat'),       energies_ref_eV)
+np.savetxt(join(model_path, 'model_ref_energies_eV.dat'), energies_ref_eV)
 np.savetxt(join(model_path, 'model_predicted_energies_eV.dat'), model_pred_eV)
-np.savetxt(join(model_path, 'model_ref_osc.dat'),               osc_ref)
-np.savetxt(join(model_path, 'model_predicted_osc.dat'),         osc_pred)
+np.savetxt(join(model_path, 'model_ref_osc.dat'), osc_ref)
+np.savetxt(join(model_path, 'model_predicted_osc.dat'), osc_pred)
 
 
 ## 5. Plotting
@@ -264,7 +264,6 @@ ax.set_ylim((b,t))
 opti_ref = np.linspace(b,t,num=10)
 ax.plot(opti_ref, opti_ref, c="C1")
 fig.savefig(join(model_path, "scatter.png"), dpi=300)
-plt.clf()
 
 # Plot Scatter Oscillator Strengths
 fig, ax = plt.subplots(1, figsize=(6,6))

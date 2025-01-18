@@ -81,10 +81,12 @@ stop_early = tf.keras.callbacks.EarlyStopping(
 
 ############################ START OF SCRIPT ##################################
 
+## 1. Load data
+
 # Load data
 x, y, n_atoms, _ = load_data_excited_states_forces(inputfile, lines_to_skip)
 
-# Generate train and test sets
+# Generate train and test sets (y_train includes total energy and all forces)
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)
 x_train, y_train, x_test, y_test = tf.convert_to_tensor(x_train), tf.convert_to_tensor(y_train), tf.convert_to_tensor(x_test), tf.convert_to_tensor(y_test)
 
@@ -92,7 +94,6 @@ x_train, y_train, x_test, y_test = tf.convert_to_tensor(x_train), tf.convert_to_
 first_preprocessor   = FirstInverseDistance()
 dummy, full_mask     = first_preprocessor(x_train)	#fullmask has True or False values for all distance checks in all samples
 reduced_mask         = tf.math.reduce_all(full_mask,0)	#if the distance is below a cutoff for all samples that distance is always considered
-#reducedmask          = tf.math.reduce_any(fullmask,0)	#if the distance is below a cutoff for any sample that distance is always considered
 preprocessor         = InverseDistance(reduced_mask)	#initialize inverse distance and filtering layer
 xtrain_dist          = preprocessor(x_train)
 dist_shape           = np.shape(xtrain_dist)
@@ -109,13 +110,18 @@ norm_var             = np.ones(dist_shape[1])
 norm_var[:-n_atoms]  = dist_var * norm_var[:-n_atoms]
 norm_var[-n_atoms:]  = esp_var * norm_var[-n_atoms:]
 normalizer           = NormalizationLayer(norm_mean, norm_var)	#initialize normalization layer
-scaler               = StandardScaler(with_std=False)	#without std the performance was better, distribution is already good apparently
-scaler.fit(y_train) #y_train includes total energy and all forces
-force_std            = np.mean(np.std(y_train[:,1:]))
-#scaler.var_[1:]      = scaler.var_[0] #F=dE_tot/dx=dE_elec/dx+dE_rep/dx must hold so the scaling scaled=(raw-mean)/sqrt(var) must be coherent
-scaler.mean_[1:]     = 0	#gradients should not be changed shifted
-y_train_scaled       = scaler.transform(y_train)
-y_test_scaled        = scaler.transform(y_test)
+
+# Scale the output data
+scaler = StandardScaler(with_std=False)	#without std the performance was better, distribution is already good apparently
+scaler.fit(y_train)
+scaler.mean_[1:] = 0 # no shift of forces
+y_train_scaled, y_test_scaled = scaler.transform(y_train), scaler.transform(y_test)
+
+# Get the standard deviation of the forces
+force_std = np.mean(np.std(y_train[:, 1:]))
+
+
+## 2. Hyperparameter search
 
 # Initialize ModelBuilder
 model_builder = hpModelBuilder(hp_dict, n_atoms, preprocessor, normalizer)
@@ -123,27 +129,44 @@ model_builder = hpModelBuilder(hp_dict, n_atoms, preprocessor, normalizer)
 # Perform hyperparameter search
 best_hps, tuner = model_builder.perform_hp_search(x_train, y_train_scaled, hp_epochs, hp_factor, batch_size, stop_early)
 
-print("------------------------------------------")
-print(f'''{best_hps.get("neurons")} neurons, {best_hps.get("layers")} layers, {best_hps.get("loss_ratio")} loss ratio, {best_hps.get("initial_lr")} initial learning rate and {best_hps.get("l2_penalty")} regulization penalty give the best results''')
-print("------------------------------------------")
+print(70 * '-')
+print(f"{best_hps.get("neurons")} neurons, {best_hps.get("layers")} layers, {best_hps.get("loss_ratio")} loss ratio, {best_hps.get("initial_lr")} initial learning rate and {best_hps.get("l2_penalty")} regulization penalty give the best results")
+print(70 * '-')
 
-# Build and train the best model
+
+## 3. Build and train the best model
+
+# Build the best model
 best_model = tuner.hypermodel.build(best_hps)
+
+# Train the best model
 hist = best_model.fit(x_train, y_train_scaled, batch_size=batch_size, epochs=fit_epochs, verbose=2, validation_split=0.2)
+
+#Save models
+best_model.save("best_model")
+
+# Wrap the model for MLMM
+mlmm_model = WrapForcesModel(best_model, scaler.mean_, 1.0)
+
+# Single prediction (wrapped model returns the scaled back values in energy + oscillator strength)
+test_pred_rescaled = mlmm_model(x_test)
+
+# Save the wrapped model
+mlmm_model.save("mlmm_model")
+
+# Save the scaler
+joblib.dump(scaler, "scaler.pkl")
+
+
+# Get ?????????
 losses = hist.history["loss"]
 val_losses = hist.history["val_loss"]
 # eval = best_model.evaluate(x_test, y_test_scaled)
 print("!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 print(best_model(x_test).shape, x_test.shape, y_test_scaled.shape)
 
-#Save models
-best_model.save("best_model")
-mlmm_model = WrapForcesModel(best_model, scaler.mean_, 1.0)
-test_pred_rescaled = mlmm_model(x_test)
-mlmm_model.save("mlmm_model")
 
-# Save the scaler
-joblib.dump(scaler, "scaler.pkl")
+## 4. Evaluation of the model (stored in train.out)
 
 #Print Performance
 forces_pred = K.flatten(test_pred_rescaled[:, 1:])
@@ -161,7 +184,7 @@ print(mae_forces, ' eV/A')
 print("MAE Forces/STD Forces in %:")
 print(100 * mae_forces / force_std)
 
-#Save predictions and references for test data
+# Save predictions and references for test data
 np.savetxt("energy_predictions.txt", test_pred_rescaled[:, 0])
 np.savetxt("force_predictions.txt", forces_pred)
 np.savetxt("energy_ref.txt", y_test[:, 0])
@@ -176,31 +199,27 @@ plt.legend()
 plt.xlabel("Epochs")
 plt.ylabel("Combined MSE")
 plt.savefig("loss.png", dpi=300)
-plt.clf()
 
-#Total Energy
+# Plot total energy
 plt.hist2d(y_test[:,0], test_pred_rescaled[:,0], bins=100, cmin=1, cmap='inferno')
 plt.xlabel('True Values [Eh]')
 plt.ylabel('Predictions [Eh]')
 plt.colorbar()
 plt.plot([min(y_test[:,0]), max(y_test[:,0])], [min(y_test[:,0]), max(y_test[:,0])])
 plt.savefig("tot_ene.png", dpi=300)
-plt.clf()
 
-#Forces 1
+# Plot forces histogram with minimum in bin of 1
 plt.hist2d(forces_test * HaB_to_eVA, forces_pred * HaB_to_eVA, bins=100, cmin=1, cmap='inferno')
 plt.xlabel('True Values [eV/A]')
 plt.ylabel('Predictions [eV/A]')
 plt.colorbar()
 plt.plot([-13.5,13.5], [-13.5,13.5])
 plt.savefig("forces_cmin1.png", dpi=300)
-plt.clf()
 
-#Forces 50
+# Plot forces histogram with minimum in bin of 50
 plt.hist2d(forces_test * HaB_to_eVA, forces_pred * HaB_to_eVA, bins=100, cmin=50, cmap='inferno')
 plt.xlabel('True Values [eV/A]')
 plt.ylabel('Predictions [eV/A]')
 plt.colorbar()
 plt.plot([-13.5,13.5], [-13.5,13.5])
 plt.savefig("forces_cmin50.png", dpi=300)
-plt.clf()
