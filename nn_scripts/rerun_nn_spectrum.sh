@@ -25,6 +25,7 @@ ap.add_argument("-g", "--gpuid", type=int)
 ap.add_argument("-f", "--file", required=True, help="Path to the input file")
 ap.add_argument("-m", "--model", required=True, help="Path to the model", default=None)
 ap.add_argument("-s", "--save", action="store_true", help="Save energy and oscillator strength in separate files", default=True)
+ap.add_argument("-l", "--lines", type=int, help="Number of (comment) lines to skip in the input file", default=0)
 args = ap.parse_args()
 set_gpu([args.gpuid])          ###############  wichtig !!
 
@@ -33,7 +34,7 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 keep_energy_and_osc = args.save # you want energy and osc. str. saved in separate files
 parent_path = os.getcwd() # path for evaluation
 data_path = args.file
-lines_to_skip = 1 # modular via argparse
+lines_to_skip = args.lines # != 0 in case of comment lines in data (e.g. energy line)
 
 ## Load model
 model_path = args.model
