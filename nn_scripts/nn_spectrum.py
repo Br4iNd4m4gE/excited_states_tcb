@@ -152,7 +152,7 @@ y_train = data["targets_scaled"]
 # Remove old outputtuner directory
 if clean_up_hpoutpath:
     if os.path.isdir(hp_out_path): # this is needed if tuner quits with "INFO:tensorflow:Oracle triggered exit"
-        shutil.rmtree(hp_out_path) # = bash's rm -rf
+        shutil.rmtree(hp_out_path)
 
 # Initialize ModelBuilder
 model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm, data["coords"])

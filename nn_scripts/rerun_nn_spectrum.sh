@@ -36,7 +36,6 @@ data_path = args.file
 lines_to_skip = 1 # modular via argparse
 
 ## Load model
-# If model name is given as argument, use this model
 model_path = args.model
 print(f"Model Path: {abspath(model_path)}")
 
@@ -80,7 +79,7 @@ xyz_data = np.asarray(xyz_data, dtype=np.float32)
 coords = xyz_data[:,:,:3] * A2Bohr
 esp    = xyz_data[:,:,3]
 
-x_data = (coords, esp) # for oder models [coords, esp]
+x_data = (coords, esp) # for older models [coords, esp]
 
 # Predict energy and oscillator strength
 pred = model(x_data)
@@ -91,7 +90,6 @@ pred_eV = predlist[:,0] * EhtoeV
 print(len(pred_eV))
 
 # Plot histogram
-# plt.clf()
 try:
 	# Create histogram with normalization
 	n, bins, patches = plt.hist(pred_eV, bins=100, weights=predlist[:, 1], alpha=0.5, density=True) #,range=[2.5,4.5])
