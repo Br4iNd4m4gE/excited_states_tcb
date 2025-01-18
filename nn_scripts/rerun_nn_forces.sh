@@ -79,9 +79,6 @@ print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 if prediction.shape[1] != y.shape[1]:
     raise ValueError(f"Shape mismatch: predictions have shape {prediction.shape} but expected shape {y.shape}")
 
-# # Inverse transform the predictions
-# prediction = scaler.inverse_transform(prediction)
-
 # Calculate performance metrics
 forces_pred = K.flatten(prediction[:, 1:])
 forces_true = K.flatten(y[:, 1:])

@@ -15,7 +15,6 @@ class WrapForcesModel(ks.Model):
 	def call(self, inputs):
 		outputs = self.submodel(inputs)
 		outputs_rescaled = self.std * outputs + self.mean
-		tf.print("wrap", outputs.shape)
 		return outputs_rescaled
 
 	def get_config(self):
