@@ -177,7 +177,6 @@ model_pred = wrapped_model.predict(x_test) # you need to call the model once, be
 
 # Save model
 wrapped_model.save(model_path)
-hp_model.save(join(outpath, "testitest"))
 
 # Get best epoch
 hp_best_epoch_idx = np.argmin(hp_hist.history["val_loss"])

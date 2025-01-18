@@ -80,11 +80,7 @@ xyz_data = np.asarray(xyz_data, dtype=np.float32)
 coords = xyz_data[:,:,:3] * A2Bohr
 esp    = xyz_data[:,:,3]
 
-x_data = (coords, esp)
-
-# print(coords.shape, esp.shape)
-# print(coords[0])
-# print(esp[0])
+x_data = (coords, esp) # for oder models [coords, esp]
 
 # Predict energy and oscillator strength
 pred = model(x_data)

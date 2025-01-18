@@ -35,8 +35,7 @@ class WrapEnergyModel(ks.Model):
         self.std = tf.convert_to_tensor(var, dtype=tf.float32)
 
     def call(self, inputs):
-        xyz, esp = inputs[0], inputs[1]
-        outputs = self.submodel([xyz, esp])
+        outputs = self.submodel(inputs)
         outputs_rescaled = self.std * outputs + self.mean
         return outputs_rescaled
     
