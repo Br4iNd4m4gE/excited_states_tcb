@@ -362,12 +362,12 @@ class FeatureGeometric(ks.layers.Layer):
         return feat_segments
 
 
-class InverseDistance(ks.layers.Layer):
+class InverseDistance_with_ESP(ks.layers.Layer):
     """
     Layer to compute inverse distances with a mask to filter large distances.
     """
     def __init__(self, inputs: np.ndarray):
-        super(InverseDistance, self).__init__()
+        super(InverseDistance_with_ESP, self).__init__()
         """
         Mask filters large distances and reduces the dimension of the input
         """
@@ -380,7 +380,7 @@ class InverseDistance(ks.layers.Layer):
         return mask
 
     def build(self, input_shape):
-        super(InverseDistance, self).build(input_shape)
+        super(InverseDistance_with_ESP, self).build(input_shape)
     
     def inv_distances(self, inputs: np.ndarray):
         def compute_pairwise_distances(coords):

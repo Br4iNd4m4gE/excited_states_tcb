@@ -14,7 +14,7 @@ from pyNNsMD.esp_nn import build_geom_preprocess_layer, ScaledMeanAbsoluteError,
 from pyNNsMD.layers.mlp import MLP
 from pyNNsMD.scaler.general import ScalingLayer
 from pyNNsMD.layers.normalize import NormalizationLayer
-from pyNNsMD.layers.features import InverseDistance
+from pyNNsMD.layers.features import InverseDistance_with_ESP
 
 class hpModelBuilder_forces:
     """
@@ -35,13 +35,8 @@ class hpModelBuilder_forces:
         # The init method is used to precompute the normalization parameters for the inverse distance layer
         # And the normalization layer. The inverse distance layer is the first layer of the model.
 
-        # Get mask to filter large distances, scale output data and get input mean and variance for Normalization
-        # first_preprocessor = InverseDistance(x_train)
-        # _, full_mask = first_preprocessor(x_train)	#fullmask has True or False values for all distance checks in all samples
-        # reduced_mask = tf.math.reduce_all(full_mask, 0)	#if the distance is below a cutoff for all samples that distance is always considered
-
         # Initialize inverse distance and filtering layer
-        self.preprocessor = InverseDistance(x_train) # initialize inverse distance layer (set mask)
+        self.preprocessor = InverseDistance_with_ESP(x_train) # initialize inverse distance layer (set mask)
         xtrain_dist = self.preprocessor(x_train)
         dist_shape = np.shape(xtrain_dist)
         
