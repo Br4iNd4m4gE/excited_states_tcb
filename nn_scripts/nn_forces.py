@@ -21,8 +21,6 @@ sys.path.append(abspath(join(dirname(__file__), "..")))
 from pyNNsMD.utils.general import unit_conversions, load_data_excited_states_forces, read_json_config
 from pyNNsMD.nn_pes_src.device import set_gpu
 from pyNNsMD.layers.wrapper import WrapForcesModel
-from pyNNsMD.layers.normalize import NormalizationLayer
-from pyNNsMD.layers.inverse_distance import InverseDistance, FirstInverseDistance
 from pyNNsMD.models.hp import hpModelBuilder
 
 
@@ -90,33 +88,8 @@ x, y, n_atoms, _ = load_data_excited_states_forces(inputfile, lines_to_skip)
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)
 x_train, y_train, x_test, y_test = tf.convert_to_tensor(x_train), tf.convert_to_tensor(y_train), tf.convert_to_tensor(x_test), tf.convert_to_tensor(y_test)
 
-# Get mask to filter large distances, scale output data and get input mean and variance for Normalization
-first_preprocessor = FirstInverseDistance()
-_, full_mask = first_preprocessor(x_train)	#fullmask has True or False values for all distance checks in all samples
-reduced_mask = tf.math.reduce_all(full_mask, 0)	#if the distance is below a cutoff for all samples that distance is always considered
-#initialize inverse distance and filtering layer
-preprocessor         = InverseDistance(reduced_mask)  # needed later
-xtrain_dist          = preprocessor(x_train)
-dist_shape           = np.shape(xtrain_dist)
-x_train_dist_mean    = np.mean(xtrain_dist, 0)
-#different means for inverse distances and ESP
-dist_mean            = np.mean(x_train_dist_mean[:-n_atoms])
-esp_mean             = np.mean(x_train_dist_mean[-n_atoms:])
-norm_mean            = np.ones(dist_shape[1])
-norm_mean[:-n_atoms] = dist_mean * norm_mean[:-n_atoms]
-norm_mean[-n_atoms:] = esp_mean * norm_mean[-n_atoms:]
-x_train_dist_var     = np.var(xtrain_dist, 0)
-#different means for inverse distances and ESP
-dist_var             = np.mean(x_train_dist_var[:-n_atoms])
-esp_var              = np.mean(x_train_dist_var[-n_atoms:])
-norm_var             = np.ones(dist_shape[1])
-norm_var[:-n_atoms]  = dist_var * norm_var[:-n_atoms]
-norm_var[-n_atoms:]  = esp_var * norm_var[-n_atoms:]
-#initialize normalization layer
-normalizer           = NormalizationLayer(norm_mean, norm_var) # needed later
-
 # Scale the output data
-scaler = StandardScaler(with_std=False)	#without std the performance was better, distribution is already good apparently
+scaler = StandardScaler(with_std=False)	# without std the performance was better, distribution is already good apparently
 scaler.fit(y_train)
 scaler.mean_[1:] = 0 # no shift of forces
 y_train_scaled, y_test_scaled = scaler.transform(y_train), scaler.transform(y_test)
@@ -125,7 +98,7 @@ y_train_scaled, y_test_scaled = scaler.transform(y_train), scaler.transform(y_te
 ## 2. Hyperparameter search
 
 # Initialize ModelBuilder
-model_builder = hpModelBuilder(hp_dict, n_atoms, preprocessor, normalizer)
+model_builder = hpModelBuilder(hp_dict, n_atoms, x_train)
 
 # Perform hyperparameter search
 best_hps, tuner = model_builder.perform_hp_search(x_train, y_train_scaled, hp_epochs, hp_factor, batch_size, stop_early)
@@ -182,7 +155,7 @@ print("MAE Total Energy: ", mae_te, ' eV')
 print("-----")
 print("R2 Forces: ", r2_score(forces_test, forces_pred))
 print("MAE Forces: ", mae_forces, ' eV/A')
-print("MAE Forces/STD Forces in %: ", 100 * mae_forces / force_std)
+print("MAE Forces / STD Forces: ", 100 * mae_forces / force_std, " %")
 
 # Save predictions and references for test data
 np.savetxt("energy_predictions.txt", test_pred_rescaled[:, 0])

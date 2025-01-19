@@ -31,7 +31,7 @@ class WrapEnergyModel(ks.Model):
         super().__init__()
         self.submodel = model
         self.mean = tf.convert_to_tensor(mean, dtype=tf.float32)
-        self.std = tf.convert_to_tensor(var, dtype=tf.float32)
+        self.std = tf.sqrt(tf.convert_to_tensor(var, dtype=tf.float32))
 
     def call(self, inputs):
         outputs = self.submodel(inputs)

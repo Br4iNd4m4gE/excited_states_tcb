@@ -13,16 +13,60 @@ sys.path.append(abspath(join(dirname(__file__), "..", "..")))
 from pyNNsMD.esp_nn import build_geom_preprocess_layer, ScaledMeanAbsoluteError, precompute_feature_in_chunks
 from pyNNsMD.layers.mlp import MLP
 from pyNNsMD.scaler.general import ScalingLayer
+from pyNNsMD.layers.normalize import NormalizationLayer
+from pyNNsMD.layers.inverse_distance import InverseDistance, FirstInverseDistance
 
 class hpModelBuilder:
     """
     Class for HP search for force NN.
     """
-    def __init__(self, hp_dict, n_atoms, preprocessor, normalizer):
+    def __init__(self, hp_dict: dict, n_atoms: int, x_train: np.ndarray):
+        """
+        Initialize the hyperparameters and preprocess the training data.
+
+        Parameters:
+        hp_dict (dict): Hyperparameters dictionary.
+        n_atoms (int): Number of atoms.
+        x_train (np.ndarray): Training data.
+        """
         self.hp_dict = hp_dict
         self.n_atoms = n_atoms
-        self.preprocessor = preprocessor
-        self.normalizer = normalizer
+
+        # Get mask to filter large distances, scale output data and get input mean and variance for Normalization
+        first_preprocessor = FirstInverseDistance()
+        _, full_mask = first_preprocessor(x_train)	#fullmask has True or False values for all distance checks in all samples
+        reduced_mask = tf.math.reduce_all(full_mask, 0)	#if the distance is below a cutoff for all samples that distance is always considered
+
+        # Initialize inverse distance and filtering layer
+        self.preprocessor = InverseDistance(reduced_mask)
+        xtrain_dist = self.preprocessor(x_train)
+        dist_shape = np.shape(xtrain_dist)
+        
+        x_train_dist_mean = np.mean(xtrain_dist, axis=0)
+
+        # Calculate different means for inverse distances and ESP
+        dist_mean = np.mean(x_train_dist_mean[:-n_atoms])
+        esp_mean = np.mean(x_train_dist_mean[-n_atoms:])
+
+        # Initialize normalization mean
+        norm_mean = np.ones(dist_shape[1])
+        norm_mean[:-n_atoms] *= dist_mean
+        norm_mean[-n_atoms:] *= esp_mean
+
+        x_train_dist_var = np.var(xtrain_dist, axis=0)
+
+        # Calculate different variances for inverse distances and ESP
+        dist_var = np.mean(x_train_dist_var[:-n_atoms])
+        esp_var = np.mean(x_train_dist_var[-n_atoms:])
+
+        # Initialize normalization variance
+        norm_var = np.ones(dist_shape[1])
+        norm_var[:-n_atoms] *= dist_var
+        norm_var[-n_atoms:] *= esp_var
+
+        # Store normalizer
+        self.normalizer = NormalizationLayer(norm_mean, norm_var)
+
 
     def build_model(self, hp):
         # Define the model
