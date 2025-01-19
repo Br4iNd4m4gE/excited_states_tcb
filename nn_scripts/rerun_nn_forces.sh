@@ -95,14 +95,13 @@ print("MAE Total Energy:", mae_energy, "eV")
 print("R2 Forces:", r2_forces)
 print("MAE Forces:", mae_forces, "eV/A")
 
-if args.save:
-    # Save the predictions
+# Save the predictions
+if args.save_f:
     output_file = args.output
     with open(output_file, "w") as f:
-        f.write("Total Energy [eV]  Forces [eV/A]\n")
-        for i, pred in enumerate(prediction):
-            pred_str = " ".join(map(str, pred.numpy().flatten()))
-            f.write(f"{pred_str}\n")
+        f.write("Forces [eV/A]\n")
+        for i in range(len(forces_pred)):
+            f.write(f"{forces_pred[i]}\n")
 
     print(f"Predictions saved to {output_file}")
 

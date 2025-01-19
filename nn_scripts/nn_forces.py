@@ -116,8 +116,8 @@ best_model = tuner.hypermodel.build(best_hps)
 # Train the best model
 hist = best_model.fit(x_train, y_train_scaled, batch_size=batch_size, epochs=fit_epochs, verbose=2, validation_split=0.2)
 
-# Save the model
-best_model.save("best_model")
+# # Save the model
+# best_model.save("best_model")
 
 # Wrap the model for MLMM
 mlmm_model = WrapForcesModel(best_model, scaler.mean_, 1.0)
