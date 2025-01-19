@@ -21,7 +21,7 @@ sys.path.append(abspath(join(dirname(__file__), "..")))
 from pyNNsMD.utils.general import unit_conversions, load_data_excited_states_forces, read_json_config
 from pyNNsMD.nn_pes_src.device import set_gpu
 from pyNNsMD.layers.wrapper import WrapForcesModel
-from pyNNsMD.models.hp import hpModelBuilder
+from pyNNsMD.models.hp import hpModelBuilder_forces
 
 
 ############################ PARSE ARGUMENTS ##################################
@@ -98,7 +98,7 @@ y_train_scaled, y_test_scaled = scaler.transform(y_train), scaler.transform(y_te
 ## 2. Hyperparameter search
 
 # Initialize ModelBuilder
-model_builder = hpModelBuilder(hp_dict, n_atoms, x_train)
+model_builder = hpModelBuilder_forces(hp_dict, n_atoms, x_train)
 
 # Perform hyperparameter search
 best_hps, tuner = model_builder.perform_hp_search(x_train, y_train_scaled, hp_epochs, hp_factor, batch_size, stop_early)
@@ -116,7 +116,7 @@ best_model = tuner.hypermodel.build(best_hps)
 # Train the best model
 hist = best_model.fit(x_train, y_train_scaled, batch_size=batch_size, epochs=fit_epochs, verbose=2, validation_split=0.2)
 
-#Save models
+# Save the model
 best_model.save("best_model")
 
 # Wrap the model for MLMM
