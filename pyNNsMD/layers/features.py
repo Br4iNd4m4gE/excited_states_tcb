@@ -383,7 +383,7 @@ class InverseDistance_with_ESP(ks.layers.Layer):
         super(InverseDistance_with_ESP, self).build(input_shape)
     
     def inv_distances(self, inputs: np.ndarray):
-        def compute_pairwise_distances(coords):
+        def compute_pairwise_distances(coords: np.ndarray):
             """
             Compute pairwise squared distances between all atoms in a batch of structures.
             """
@@ -393,7 +393,7 @@ class InverseDistance_with_ESP(ks.layers.Layer):
             squared_distances = K.sum(K.square(pairwise_diff), axis=-1)
             return squared_distances
 
-        def create_upper_triangle_mask(batch_size, num_atoms):
+        def create_upper_triangle_mask(batch_size: int, num_atoms: int):
             """
             Create a mask for the upper triangle of a matrix.
             """
