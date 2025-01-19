@@ -29,7 +29,9 @@ class InverseDistance(ks.layers.Layer): #taken from Milas code, added ESP and ma
 		d = K.reshape(d,(ins[0],(ins_int[1]*(ins_int[1]-1))//2))
 		d = K.sqrt(d)
 		out = 1/d
+
 		out = tf.transpose(tf.boolean_mask(tf.transpose(out),self.mask1))	#comment to turn off filtering
+		
 		out = K.concatenate((out,esp),axis=-1)
 		return out
 
@@ -59,8 +61,8 @@ class FirstInverseDistance(ks.layers.Layer): #to generate mask1 that filters lar
 		d = K.reshape(d,(ins[0],(ins_int[1]*(ins_int[1]-1))//2))
 		d = K.sqrt(d)
 		out = 1/d
+
 		mask1 = K.greater(out,0.1)	#this checks if the inverse distance of a pair of atoms is too low
-		#mask1=K.less(out,0.1)
-		#mask1=tf.math.logical_not(mask1)	#this checks if the inverse distance of a pair of atoms is high enough
+		
 		out = K.concatenate((out,esp),axis=-1)
 		return out, mask1

@@ -174,6 +174,7 @@ plt.legend()
 plt.xlabel("Epochs")
 plt.ylabel("Combined MSE")
 plt.savefig("loss.png", dpi=300)
+plt.clf()
 
 # Plot total energy
 plt.hist2d(y_test[:,0], test_pred_rescaled[:,0], bins=100, cmin=1, cmap='inferno')
@@ -182,6 +183,7 @@ plt.ylabel('Predictions [Eh]')
 plt.colorbar()
 plt.plot([min(y_test[:,0]), max(y_test[:,0])], [min(y_test[:,0]), max(y_test[:,0])])
 plt.savefig("tot_ene.png", dpi=300)
+plt.clf()
 
 # Plot forces histogram with minimum in bin of 1
 plt.hist2d(forces_test * HaB_to_eVA, forces_pred * HaB_to_eVA, bins=100, cmin=1, cmap='inferno')
@@ -190,6 +192,7 @@ plt.ylabel('Predictions [eV/A]')
 plt.colorbar()
 plt.plot([-13.5,13.5], [-13.5,13.5])
 plt.savefig("forces_cmin1.png", dpi=300)
+plt.clf()
 
 # Plot forces histogram with minimum in bin of 50
 plt.hist2d(forces_test * HaB_to_eVA, forces_pred * HaB_to_eVA, bins=100, cmin=50, cmap='inferno')

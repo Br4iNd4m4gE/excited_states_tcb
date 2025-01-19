@@ -360,34 +360,32 @@ class FeatureGeometric(ks.layers.Layer):
         return feat_segments
 
 
-class InverseDistance(ks.layers.Layer):
-    def __init__(self, **kwargs):
-        super(InverseDistance, self).__init__(**kwargs)
-        # self.dinv_mean = dinv_mean
-        # self.dinv_std = dinv_std
+# class InverseDistance(ks.layers.Layer):
+#     def __init__(self, **kwargs):
+#         super(InverseDistance, self).__init__(**kwargs)
 
-    def build(self, input_shape):
-        super(InverseDistance, self).build(input_shape)
+#     def build(self, input_shape):
+#         super(InverseDistance, self).build(input_shape)
 
-    def call(self, inputs, **kwargs):
-        coords = inputs  # (batch,N,3)
-        # Compute square dinstance matrix
-        ins_int = ks.backend.int_shape(coords)
-        ins = ks.backend.shape(coords)
-        a = ks.backend.expand_dims(coords, axis=1)
-        b = ks.backend.expand_dims(coords, axis=2)
-        c = b - a  # (batch,N,N,3)
-        d = ks.backend.sum(ks.backend.square(c), axis=-1)  # squared distance without sqrt for derivative
-        # Compute Mask for lower tri
-        ind1 = ks.backend.expand_dims(ks.backend.arange(0, ins_int[1]), axis=1)
-        ind2 = ks.backend.expand_dims(ks.backend.arange(0, ins_int[1]), axis=0)
-        mask = ks.backend.less(ind1, ind2)
-        mask = ks.backend.expand_dims(mask, axis=0)
-        mask = ks.backend.tile(mask, (ins[0], 1, 1))  # (batch,N,N)
-        # Apply Mask and reshape
-        d = d[mask]
-        d = ks.backend.reshape(d, (ins[0], ins_int[1] * (ins_int[1] - 1) // 2))  # Not pretty
-        d = ks.backend.sqrt(d)  # Now the sqrt is okay
-        out = 1 / d  # Now inverse should also be okay
-        # out = (out - self.dinv_mean )/self.dinv_std #standardize with fixed values.
-        return out
+#     def call(self, inputs, **kwargs):
+#         coords = inputs  # (batch,N,3)
+#         # Compute square dinstance matrix
+#         ins_int = ks.backend.int_shape(coords)
+#         ins = ks.backend.shape(coords)
+#         a = ks.backend.expand_dims(coords, axis=1)
+#         b = ks.backend.expand_dims(coords, axis=2)
+#         c = b - a  # (batch,N,N,3)
+#         d = ks.backend.sum(ks.backend.square(c), axis=-1)  # squared distance without sqrt for derivative
+#         # Compute Mask for lower tri
+#         ind1 = ks.backend.expand_dims(ks.backend.arange(0, ins_int[1]), axis=1)
+#         ind2 = ks.backend.expand_dims(ks.backend.arange(0, ins_int[1]), axis=0)
+#         mask = ks.backend.less(ind1, ind2)
+#         mask = ks.backend.expand_dims(mask, axis=0)
+#         mask = ks.backend.tile(mask, (ins[0], 1, 1))  # (batch,N,N)
+#         # Apply Mask and reshape
+#         d = d[mask]
+#         d = ks.backend.reshape(d, (ins[0], ins_int[1] * (ins_int[1] - 1) // 2))  # Not pretty
+#         d = ks.backend.sqrt(d)  # Now the sqrt is okay
+#         out = 1 / d  # Now inverse should also be okay
+#         # out = (out - self.dinv_mean )/self.dinv_std #standardize with fixed values.
+#         return out
