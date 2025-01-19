@@ -14,7 +14,7 @@ from pyNNsMD.esp_nn import build_geom_preprocess_layer, ScaledMeanAbsoluteError,
 from pyNNsMD.layers.mlp import MLP
 from pyNNsMD.scaler.general import ScalingLayer
 from pyNNsMD.layers.normalize import NormalizationLayer
-from pyNNsMD.layers.inverse_distance import InverseDistance, FirstInverseDistance
+from pyNNsMD.layers.features import InverseDistance, FirstInverseDistance
 
 class hpModelBuilder_forces:
     """
