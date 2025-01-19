@@ -44,7 +44,7 @@ print(f"Model Path: {abspath(model_path)}")
 model = tf.saved_model.load(model_path)
 
 # Load unit conversions
-A2Bohr, EhtoeV, ehtonm = unit_conversions["A2Bohr"], unit_conversions["EhtoeV"], unit_conversions["ehtonm"]
+A2Bohr, EhtoeV = unit_conversions["A2Bohr"], unit_conversions["EhtoeV"]
 
 # Load Stuff
 natoms = extract_number_of_atoms(data_path, lines_to_skip)
