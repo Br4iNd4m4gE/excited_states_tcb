@@ -374,7 +374,7 @@ class InverseDistance_with_ESP(ks.layers.Layer):
         self.mask = self.create_mask(inputs)
         self.mask = tf.math.reduce_all(self.mask, axis=0) #if the distance is below a cutoff for all samples that distance is always considered
     
-    def create_mask(self, inputs: np.ndarray):
+    def create_mask(self, inputs: np.ndarray) -> tf.Tensor:
         inv_dist = self.inv_distances(inputs)
         mask = K.greater(inv_dist, 0.1) # 0.1 is arbitrary
         return mask
@@ -382,8 +382,8 @@ class InverseDistance_with_ESP(ks.layers.Layer):
     def build(self, input_shape):
         super(InverseDistance_with_ESP, self).build(input_shape)
     
-    def inv_distances(self, inputs: np.ndarray):
-        def compute_pairwise_distances(coords: np.ndarray):
+    def inv_distances(self, inputs: np.ndarray) -> tf.Tensor:
+        def compute_pairwise_distances(coords: np.ndarray) -> tf.Tensor:
             """
             Compute pairwise squared distances between all atoms in a batch of structures.
             """
@@ -393,7 +393,7 @@ class InverseDistance_with_ESP(ks.layers.Layer):
             squared_distances = K.sum(K.square(pairwise_diff), axis=-1)
             return squared_distances
 
-        def create_upper_triangle_mask(batch_size: int, num_atoms: int):
+        def create_upper_triangle_mask(batch_size: int, num_atoms: int) -> tf.Tensor:
             """
             Create a mask for the upper triangle of a matrix.
             """
@@ -422,10 +422,10 @@ class InverseDistance_with_ESP(ks.layers.Layer):
 
         return inverse_distances
 
-    def call(self, inputs: np.ndarray):
+    def call(self, inputs: np.ndarray) -> tf.Tensor:
         inv_distances = self.inv_distances(inputs)
         filtered_distances = tf.transpose(tf.boolean_mask(tf.transpose(inv_distances), self.mask))
 
         esp = inputs[:, :, 3]
-        output = K.concatenate((filtered_distances, esp),axis=-1)
+        output = K.concatenate((filtered_distances, esp), axis=-1)
         return output
