@@ -16,7 +16,7 @@ from pyNNsMD.scaler.general import ScalingLayer
 from pyNNsMD.layers.normalize import NormalizationLayer
 from pyNNsMD.layers.inverse_distance import InverseDistance, FirstInverseDistance
 
-class hpModelBuilder:
+class hpModelBuilder_forces:
     """
     Class for HP search for force NN.
     """
@@ -34,7 +34,7 @@ class hpModelBuilder:
 
         # The init method is used to precompute the normalization parameters for the inverse distance layer
         # And the normalization layer. The inverse distance layer is the first layer of the model.
-        
+
         # Get mask to filter large distances, scale output data and get input mean and variance for Normalization
         first_preprocessor = FirstInverseDistance()
         _, full_mask = first_preprocessor(x_train)	#fullmask has True or False values for all distance checks in all samples
