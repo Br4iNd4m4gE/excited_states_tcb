@@ -21,7 +21,6 @@ import subprocess
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-g", "--gpuid", type=int)
-# ap.add_argument("-p", "--outname") # wird ggf. ignoriert
 ap.add_argument("-f", "--file", required=True, help="Path to the input file")
 ap.add_argument("-m", "--model", required=True, help="Path to the model", default=None)
 ap.add_argument("-s", "--save", action="store_true", help="Save energy and oscillator strength in separate files", default=True)
