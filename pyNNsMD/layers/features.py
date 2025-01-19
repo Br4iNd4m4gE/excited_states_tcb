@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow.keras as ks
 import tensorflow.keras.backend as K
+import numpy as np
 
 
 class InverseDistanceIndexed(ks.layers.Layer):
@@ -361,96 +362,70 @@ class FeatureGeometric(ks.layers.Layer):
         return feat_segments
 
 
-# class InverseDistance(ks.layers.Layer):
-#     def __init__(self, **kwargs):
-#         super(InverseDistance, self).__init__(**kwargs)
+class InverseDistance(ks.layers.Layer):
+    """
+    Layer to compute inverse distances with a mask to filter large distances.
+    """
+    def __init__(self, inputs: np.ndarray):
+        super(InverseDistance, self).__init__()
+        """
+        Mask filters large distances and reduces the dimension of the input
+        """
+        self.mask = self.create_mask(inputs)
+        self.mask = tf.math.reduce_all(self.mask, axis=0) #if the distance is below a cutoff for all samples that distance is always considered
+    
+    def create_mask(self, inputs: np.ndarray):
+        inv_dist = self.inv_distances(inputs)
+        mask = K.greater(inv_dist, 0.1) # 0.1 is arbitrary
+        return mask
 
-#     def build(self, input_shape):
-#         super(InverseDistance, self).build(input_shape)
+    def build(self, input_shape):
+        super(InverseDistance, self).build(input_shape)
+    
+    def inv_distances(self, inputs: np.ndarray):
+        def compute_pairwise_distances(coords):
+            """
+            Compute pairwise squared distances between all atoms in a batch of structures.
+            """
+            expanded_coords_1 = K.expand_dims(coords, axis=1)
+            expanded_coords_2 = K.expand_dims(coords, axis=2)
+            pairwise_diff = expanded_coords_2 - expanded_coords_1
+            squared_distances = K.sum(K.square(pairwise_diff), axis=-1)
+            return squared_distances
 
-#     def call(self, inputs, **kwargs):
-#         coords = inputs  # (batch,N,3)
-#         # Compute square dinstance matrix
-#         ins_int = ks.backend.int_shape(coords)
-#         ins = ks.backend.shape(coords)
-#         a = ks.backend.expand_dims(coords, axis=1)
-#         b = ks.backend.expand_dims(coords, axis=2)
-#         c = b - a  # (batch,N,N,3)
-#         d = ks.backend.sum(ks.backend.square(c), axis=-1)  # squared distance without sqrt for derivative
-#         # Compute Mask for lower tri
-#         ind1 = ks.backend.expand_dims(ks.backend.arange(0, ins_int[1]), axis=1)
-#         ind2 = ks.backend.expand_dims(ks.backend.arange(0, ins_int[1]), axis=0)
-#         mask = ks.backend.less(ind1, ind2)
-#         mask = ks.backend.expand_dims(mask, axis=0)
-#         mask = ks.backend.tile(mask, (ins[0], 1, 1))  # (batch,N,N)
-#         # Apply Mask and reshape
-#         d = d[mask]
-#         d = ks.backend.reshape(d, (ins[0], ins_int[1] * (ins_int[1] - 1) // 2))  # Not pretty
-#         d = ks.backend.sqrt(d)  # Now the sqrt is okay
-#         out = 1 / d  # Now inverse should also be okay
-#         # out = (out - self.dinv_mean )/self.dinv_std #standardize with fixed values.
-#         return out
+        def create_upper_triangle_mask(batch_size, num_atoms):
+            """
+            Create a mask for the upper triangle of a matrix.
+            """
+            indices_1 = K.expand_dims(K.arange(0, num_atoms), axis=1)
+            indices_2 = K.expand_dims(K.arange(0, num_atoms), axis=0)
+            upper_triangle_mask = K.less(indices_1, indices_2)
+            upper_triangle_mask = K.expand_dims(upper_triangle_mask, axis=0)
+            return K.tile(upper_triangle_mask, (batch_size, 1, 1))
 
-class InverseDistance(ks.layers.Layer): #taken from Milas code, added ESP and mask
-	def __init__(self,mask1):
-		super(InverseDistance,self).__init__()
-		self.mask1 = mask1	#this mask filters large distances and reduces the inpu the dimension
+        # Extract coordinates
+        coords = inputs[:, :, :3]
+        num_atoms = K.int_shape(coords)[1]
+        batch_size = K.shape(coords)[0]
 
-	def build(self,input_shape):
-		super(InverseDistance,self).build(input_shape)
+        # Compute pairwise distances and create upper triangle mask
+        squared_distances = compute_pairwise_distances(coords)
+        upper_triangle_mask = create_upper_triangle_mask(batch_size, num_atoms)
 
-	def call(self,inputs):
-		coords = inputs[:,:,:3]
-		esp = inputs[:,:,3]
-		ins_int = K.int_shape(coords)
-		ins = K.shape(coords)
-		a = K.expand_dims(coords,axis=1)
-		b = K.expand_dims(coords,axis=2)
-		c = b-a
-		d = K.sum(K.square(c),axis=-1)
-		ind1 = K.expand_dims(K.arange(0,ins_int[1]),axis=1)
-		ind2 = K.expand_dims(K.arange(0,ins_int[1]),axis=0)
-		mask = K.less(ind1,ind2)
-		mask = K.expand_dims(mask,axis=0)
-		mask = K.tile(mask,(ins[0],1,1))
-		d = d[mask]
-		d = K.reshape(d,(ins[0],(ins_int[1]*(ins_int[1]-1))//2))
-		d = K.sqrt(d)
-		out = 1/d
+        # Filter distances and reshape
+        masked_distances = squared_distances[upper_triangle_mask]
+        reshaped_distances = K.reshape(masked_distances, (batch_size, (num_atoms * (num_atoms - 1)) // 2))
 
-		out = tf.transpose(tf.boolean_mask(tf.transpose(out),self.mask1))	#comment to turn off filtering
-		
-		out = K.concatenate((out,esp),axis=-1)
-		return out
+        # Compute inverse distances
+        distances = K.sqrt(reshaped_distances)
+        inverse_distances = 1 / distances
 
+        return inverse_distances
 
-class FirstInverseDistance(ks.layers.Layer): #to generate mask1 that filters large distances from input
-	def __init__(self):
-		super(FirstInverseDistance,self).__init__()
+    def call(self, inputs: np.ndarray):
+        inv_distances = self.inv_distances(inputs)
+        filtered_distances = tf.transpose(tf.boolean_mask(tf.transpose(inv_distances), self.mask))
 
-	def build(self,input_shape):
-		super(FirstInverseDistance,self).build(input_shape)
-
-	def call(self,inputs):
-		coords = inputs[:,:,:3]
-		esp = inputs[:,:,3]
-		ins_int = K.int_shape(coords)
-		ins = K.shape(coords)
-		a = K.expand_dims(coords,axis=1)
-		b = K.expand_dims(coords,axis=2)
-		c = b-a
-		d = K.sum(K.square(c),axis=-1)
-		ind1 = K.expand_dims(K.arange(0,ins_int[1]),axis=1)
-		ind2 = K.expand_dims(K.arange(0,ins_int[1]),axis=0)
-		mask = K.less(ind1,ind2)
-		mask = K.expand_dims(mask,axis=0)
-		mask = K.tile(mask,(ins[0],1,1))
-		d = d[mask]
-		d = K.reshape(d,(ins[0],(ins_int[1]*(ins_int[1]-1))//2))
-		d = K.sqrt(d)
-		out = 1/d
-
-		mask1 = K.greater(out,0.1)	#this checks if the inverse distance of a pair of atoms is too low
-		
-		out = K.concatenate((out,esp),axis=-1)
-		return out, mask1
+        esp = inputs[:, :, 3]
+        output = K.concatenate((filtered_distances, esp),axis=-1)
+        return output
