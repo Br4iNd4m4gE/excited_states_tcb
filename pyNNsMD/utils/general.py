@@ -191,6 +191,9 @@ unit_conversions = {
 }
 
 def load_data_excited_states_forces(inputfile, lines_to_skip):
+    """
+    returns coords in Bohr, forces in Hartree/Bohr, energy in Hartree
+    """
 
     A2Bohr = unit_conversions['A2Bohr']
 

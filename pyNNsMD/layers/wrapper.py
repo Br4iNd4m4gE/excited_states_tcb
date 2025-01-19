@@ -6,6 +6,8 @@ class WrapForcesModel(ks.Model):
 	"""
 	Wraps the NN model for the forces.
 	Neccessary to store model for MLMM with GROMACS.
+    Input: xyz in Bohr and ESP in Hartree
+    Output: Forces in Hartree/Bohr, Energie in Hartree
     """
 	def __init__(self, model, mean, var):
 		super().__init__()

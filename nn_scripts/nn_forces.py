@@ -65,7 +65,7 @@ hp_dict   = {
 inputfile = args.file
 
 # Constants and Initializations
-HaB_to_eVA = unit_conversions["HaB_to_eVA"]
+HaB_to_eVA, EhtoeV = unit_conversions["HaB_to_eVA"], unit_conversions["EhtoeV"]
 
 stop_early = tf.keras.callbacks.EarlyStopping(
     monitor = 'val_loss',
@@ -103,10 +103,6 @@ model_builder = hpModelBuilder_forces(hp_dict, n_atoms, x_train)
 # Perform hyperparameter search
 best_hps, tuner = model_builder.perform_hp_search(x_train, y_train_scaled, hp_epochs, hp_factor, batch_size, stop_early)
 
-print(70 * '-')
-print(f'{best_hps.get("neurons")} neurons, {best_hps.get("layers")} layers, {best_hps.get("loss_ratio")} loss ratio, {best_hps.get("initial_lr")} initial learning rate and {best_hps.get("l2_penalty")} regulization penalty give the best results')
-print(70 * '-')
-
 
 ## 3. Build and train the best model
 
@@ -123,7 +119,7 @@ hist = best_model.fit(x_train, y_train_scaled, batch_size=batch_size, epochs=fit
 mlmm_model = WrapForcesModel(best_model, scaler.mean_, 1.0)
 
 # Single prediction (wrapped model returns the scaled back values in energy + oscillator strength)
-test_pred_rescaled = mlmm_model(x_test)
+pred_rescaled = mlmm_model(x_test)
 
 # Save the wrapped model
 mlmm_model.save("mlmm_model")
@@ -134,13 +130,33 @@ joblib.dump(scaler, "scaler.pkl")
 
 ## 4. Evaluation of the model (stored in train.out)
 
-# Rescale the predictions
-forces_pred = K.flatten(test_pred_rescaled[:, 1:])
+# Energy predictions
+energy_test = y_test[:,0]
+energy_pred = pred_rescaled[:,0]
+
+# Convert energies to eV
+energy_test_ev = energy_test * EhtoeV
+energy_pred_ev = energy_pred * EhtoeV
+
+# Flatten the force predictions
+forces_pred = K.flatten(pred_rescaled[:, 1:])
 forces_test = K.flatten(y_test[:, 1:])
 
+# Convert forces to eV/A
+forces_test_evA = forces_test * HaB_to_eVA
+forces_pred_evA = forces_pred * HaB_to_eVA
+
 # Calculate R2 and MAE
-mae_te = mean_absolute_error(y_test[:, 0], test_pred_rescaled[:, 0])
+mae_te = mean_absolute_error(y_test[:, 0], pred_rescaled[:, 0])
 mae_forces = mean_absolute_error(forces_test, forces_pred)
+
+# Convert MAE to eV/A
+mae_te_eV = mae_te * EhtoeV
+mae_forces_eV = mae_forces * HaB_to_eVA
+
+# Calculate R2 score
+r2_te = r2_score(y_test[:, 0], pred_rescaled[:, 0])
+r2_forces = r2_score(forces_test, forces_pred)
 
 # Get the standard deviation of the forces
 force_std = np.mean(np.std(y_train[:, 1:]))
@@ -150,18 +166,22 @@ losses = hist.history["loss"]
 val_losses = hist.history["val_loss"]
 
 # Print results in train.out
-print("R2 Total Energy: ", r2_score(y_test[:, 0], test_pred_rescaled[:, 0]))
-print("MAE Total Energy: ", mae_te, ' eV')
+print("\n\n", 70 * "-", "\n\t\t\t\t\t\t\t\tSummary\n", 70 * "-")
+print(f'\n> Network Architecture:\n{best_hps.get("neurons")} neurons, {best_hps.get("layers")} layers, {best_hps.get("loss_ratio")} loss ratio, {best_hps.get("initial_lr")} initial learning rate and {best_hps.get("l2_penalty")} regulization penalty give the best results\n\n')
+
+print(f"> R2 Total Energy:\n\t{r2_te}")
+print(f"> MAE Total Energy:\n\t{mae_te} Eh\n\t{mae_te_eV} eV")
 print("-----")
-print("R2 Forces: ", r2_score(forces_test, forces_pred))
-print("MAE Forces: ", mae_forces, ' eV/A')
-print("MAE Forces / STD Forces: ", 100 * mae_forces / force_std, " %")
+print(f"> R2 Forces:\n\t{r2_forces}")
+print(f"> MAE Forces:\n\t{mae_forces} Eh/B\n\t{mae_forces_eV} eV/A")
+print("-----")
+print(f"> MAE Forces / STD Forces:\n\t{100 * mae_forces / force_std} %\n")
 
 # Save predictions and references for test data
-np.savetxt("energy_predictions.txt", test_pred_rescaled[:, 0])
-np.savetxt("force_predictions.txt", forces_pred)
-np.savetxt("energy_ref.txt", y_test[:, 0])
-np.savetxt("force_ref.txt", forces_test)
+np.savetxt("energy_predictions_Eh.txt", energy_pred)
+np.savetxt("force_predictions_EhB.txt", forces_pred)
+np.savetxt("energy_ref.txt_Eh", energy_test)
+np.savetxt("force_ref_EhB.txt", forces_test)
 
 
 ## 5. Plotting
@@ -177,7 +197,7 @@ plt.savefig("loss.png", dpi=300)
 plt.clf()
 
 # Plot total energy
-plt.hist2d(y_test[:,0], test_pred_rescaled[:,0], bins=100, cmin=1, cmap='inferno')
+plt.hist2d(energy_test, energy_pred, bins=100, cmin=1, cmap='inferno')
 plt.xlabel('True Values [Eh]')
 plt.ylabel('Predictions [Eh]')
 plt.colorbar()
@@ -186,7 +206,7 @@ plt.savefig("tot_ene.png", dpi=300)
 plt.clf()
 
 # Plot forces histogram with minimum in bin of 1
-plt.hist2d(forces_test * HaB_to_eVA, forces_pred * HaB_to_eVA, bins=100, cmin=1, cmap='inferno')
+plt.hist2d(forces_test_evA, forces_pred_evA, bins=100, cmin=1, cmap='inferno')
 plt.xlabel('True Values [eV/A]')
 plt.ylabel('Predictions [eV/A]')
 plt.colorbar()
@@ -195,7 +215,7 @@ plt.savefig("forces_cmin1.png", dpi=300)
 plt.clf()
 
 # Plot forces histogram with minimum in bin of 50
-plt.hist2d(forces_test * HaB_to_eVA, forces_pred * HaB_to_eVA, bins=100, cmin=50, cmap='inferno')
+plt.hist2d(forces_test_evA, forces_pred_evA, bins=100, cmin=50, cmap='inferno')
 plt.xlabel('True Values [eV/A]')
 plt.ylabel('Predictions [eV/A]')
 plt.colorbar()

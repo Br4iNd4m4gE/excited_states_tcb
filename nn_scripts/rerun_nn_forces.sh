@@ -31,6 +31,7 @@ ap.add_argument("-m", "--model", required=True, help="Path to the saved model")
 ap.add_argument("-se", "--save_e", action="store_true", help="Save energy and oscillator strength in separate files", default=True)
 ap.add_argument("-sf", "--save_f", action="store_true", help="Save forces and oscillator strength in separate files", default=True)
 ap.add_argument("-o", "--output", required=True, help="Output file for the predictions")
+ap.add_argument("-l", "--loss_ratio", required=True, type=float, help="Loss ratio for the optimizer")
 args = ap.parse_args()
 
 # Set GPU
@@ -43,7 +44,8 @@ A2Bohr, EhtoeV, ehtonm = unit_conversions["A2Bohr"], unit_conversions["EhtoeV"],
 
 # Load model
 model_path = args.model
-with tf.keras.utils.custom_object_scope({'my_loss_fn': custom_loss_forces(0.005)}):  # Adjust the loss_ratio as needed
+loss_ratio = args.loss_ratio
+with tf.keras.utils.custom_object_scope({'my_loss_fn': custom_loss_forces(learning_rate)}):  # Adjust the loss_ratio as needed
     mlmm_model = tf.keras.models.load_model(model_path)
 
 # Load data
@@ -58,23 +60,12 @@ print("Shape of y:", np.array(y).shape)
 x = tf.convert_to_tensor(x)
 y = tf.convert_to_tensor(y)
 
-# # Load scaler
-# scaler_folder = dirname(dirname(model_path))
-# scaler_path = join(scaler_folder, 'scaler.pkl')
-# scaler = joblib.load(scaler_path)
-
-# # Scale the output data using the loaded scaler
-# y = scaler.transform(y)
-
-print("Shape of y:", np.array(y).shape)
-
 # Evaluate the model
-# prediction = mlmm_model.predict(x)
 prediction = mlmm_model(x)
-print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-print(prediction.shape)
-# print(prediction[0])
-print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
+# DEBUGGING
+print("Shape of y:", np.array(y).shape)
+print("Shape of prediction ", prediction.shape)
 
 # Ensure the predictions have the same shape as the original data
 if prediction.shape[1] != y.shape[1]:
@@ -103,7 +94,16 @@ if args.save_f:
         for i in range(len(forces_pred)):
             f.write(f"{forces_pred[i]}\n")
 
-    print(f"Predictions saved to {output_file}")
+    print(f"Force predictions saved to {output_file}")
+
+if args.save_e:
+    output_file = args.output
+    with open(output_file, "w") as f:
+        f.write("Total Energy [eV]\n")
+        for i in range(len(prediction[:, 0])):
+            f.write(f"{prediction[i, 0]}\n")
+
+    print(f"Energy predictions saved to {output_file}")
 
 ## Plot predictions vs true values
 # Energy
