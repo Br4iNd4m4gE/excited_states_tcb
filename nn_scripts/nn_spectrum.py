@@ -257,12 +257,12 @@ ax.hist2d(energies_ref_eV, model_pred_eV.flatten(),
                 bins=1000,
                 cmin=1,
                 norm=mcolors.PowerNorm(0.5))
-b,t = get_limits([energies_ref_eV, model_pred_eV])
+b, t = get_limits([energies_ref_eV, model_pred_eV])
 ax.set_xlabel("reference [eV]")
 ax.set_ylabel("prediction [eV]")
 ax.set_aspect("equal")
-ax.set_ylim((b,t))
-opti_ref = np.linspace(b,t,num=10)
+ax.set_ylim((b, t))
+opti_ref = np.linspace(b, t, num=10)
 ax.plot(opti_ref, opti_ref, c="C1")
 fig.savefig(join(model_path, "scatter.png"), dpi=300)
 
