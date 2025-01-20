@@ -131,8 +131,8 @@ joblib.dump(scaler, "scaler.pkl")
 ## 4. Evaluation of the model (stored in train.out)
 
 # Energy predictions
-energy_test = y_test[:,0]
-energy_pred = pred_rescaled[:,0]
+energy_test = y_test[:, 0]
+energy_pred = pred_rescaled[:, 0]
 
 # Convert energies to eV
 energy_test_ev = energy_test * EhtoeV
@@ -147,7 +147,7 @@ forces_test_evA = forces_test * HaB_to_eVA
 forces_pred_evA = forces_pred * HaB_to_eVA
 
 # Calculate R2 and MAE
-mae_te = mean_absolute_error(y_test[:, 0], pred_rescaled[:, 0])
+mae_te = mean_absolute_error(energy_test, energy_pred)
 mae_forces = mean_absolute_error(forces_test, forces_pred)
 
 # Convert MAE to eV/A
@@ -155,7 +155,7 @@ mae_te_eV = mae_te * EhtoeV
 mae_forces_eV = mae_forces * HaB_to_eVA
 
 # Calculate R2 score
-r2_te = r2_score(y_test[:, 0], pred_rescaled[:, 0])
+r2_te = r2_score(energy_test, energy_pred)
 r2_forces = r2_score(forces_test, forces_pred)
 
 # Get the standard deviation of the forces
@@ -201,7 +201,7 @@ plt.hist2d(energy_test, energy_pred, bins=100, cmin=1, cmap='inferno')
 plt.xlabel('True Values [Eh]')
 plt.ylabel('Predictions [Eh]')
 plt.colorbar()
-plt.plot([min(y_test[:,0]), max(y_test[:,0])], [min(y_test[:,0]), max(y_test[:,0])])
+plt.plot([min(energy_test), max(energy_test)], [min(energy_test), max(energy_test)])
 plt.savefig("tot_ene.png", dpi=300)
 plt.clf()
 
@@ -210,7 +210,7 @@ plt.hist2d(forces_test_evA, forces_pred_evA, bins=100, cmin=1, cmap='inferno')
 plt.xlabel('True Values [eV/A]')
 plt.ylabel('Predictions [eV/A]')
 plt.colorbar()
-plt.plot([-13.5,13.5], [-13.5,13.5])
+plt.plot([-13.5, 13.5], [-13.5, 13.5])
 plt.savefig("forces_cmin1.png", dpi=300)
 plt.clf()
 
@@ -219,5 +219,5 @@ plt.hist2d(forces_test_evA, forces_pred_evA, bins=100, cmin=50, cmap='inferno')
 plt.xlabel('True Values [eV/A]')
 plt.ylabel('Predictions [eV/A]')
 plt.colorbar()
-plt.plot([-13.5,13.5], [-13.5,13.5])
+plt.plot([-13.5, 13.5], [-13.5, 13.5])
 plt.savefig("forces_cmin50.png", dpi=300)
