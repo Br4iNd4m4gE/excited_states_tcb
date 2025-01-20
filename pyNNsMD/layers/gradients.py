@@ -202,7 +202,7 @@ class EnergyGradientLayer(ks.Model):
             pred_forces = -grads[:, :, :3]
             pred_forces = tf.reshape(pred_forces, [-1, self.n_atoms * 3])
             allpred = tf.concat([output, pred_forces], 1)
-            tf.print("custom", allpred.shape)
+            # tf.print("custom", allpred.shape)
         return allpred
     
     def train_step(self, data):
