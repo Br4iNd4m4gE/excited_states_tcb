@@ -247,10 +247,7 @@ f.savefig(join(model_path, "test_loss.png"), dpi=300)
 
 # Plot Scatter Energies
 fig, ax = plt.subplots(1, figsize=(6,6))
-ax.hist2d(energies_ref_eV, model_pred_eV.flatten(),
-                bins=1000,
-                cmin=1,
-                norm=mcolors.PowerNorm(0.5))
+ax.hist2d(energies_ref_eV, model_pred_eV.flatten(), bins=1000, cmin=1, norm=mcolors.PowerNorm(0.5))
 b, t = get_limits([energies_ref_eV, model_pred_eV])
 ax.set_xlabel("reference [eV]")
 ax.set_ylabel("prediction [eV]")
@@ -262,10 +259,7 @@ fig.savefig(join(model_path, "scatter.png"), dpi=300)
 
 # Plot Scatter Oscillator Strengths
 fig, ax = plt.subplots(1, figsize=(6,6))
-ax.hist2d(osc_ref, osc_pred,
-                bins=1000,
-                cmin=1,
-                norm=mcolors.PowerNorm(0.5))
+ax.hist2d(osc_ref, osc_pred, bins=1000, cmin=1, norm=mcolors.PowerNorm(0.5))
 b, t = get_limits([osc_ref, osc_pred])
 ax.set_xlabel("reference")
 ax.set_ylabel("prediction")
