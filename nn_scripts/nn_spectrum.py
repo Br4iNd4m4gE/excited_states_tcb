@@ -222,12 +222,6 @@ print(f"\ttest R2 energy: {R2_energy}\n")
 print(f"\ttest R2 osc: {R2_osc}")
 print(f"\ttest R2 (combined): {R2_total}")
 print(f"\tbest epoch: {hp_best_epoch_idx}")
-print("-----")
-print(f'\tbest train loss: {hp_hist.history["loss"][hp_best_epoch_idx]} atomic units')
-print(f'\tbest train R2 (combined): {hp_hist.history["r2_metric"][hp_best_epoch_idx]}')
-print("-----")
-print(f'\tbest val loss: {hp_hist.history["val_loss"][hp_best_epoch_idx]} atomic units')
-print(f'\tbest val R2 (combined): {hp_hist.history["val_r2_metric"][hp_best_epoch_idx]}\n')
 
 # Save data of energies and oscillator strengths of predictions and references
 np.savetxt(join(model_path, 'model_ref_energies_eV.dat'), energies_ref_eV)
