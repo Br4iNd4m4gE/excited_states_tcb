@@ -45,7 +45,7 @@ A2Bohr, EhtoeV, ehtonm = unit_conversions["A2Bohr"], unit_conversions["EhtoeV"],
 # Load model
 model_path = args.model
 loss_ratio = args.loss_ratio
-with tf.keras.utils.custom_object_scope({'my_loss_fn': custom_loss_forces(learning_rate)}):  # Adjust the loss_ratio as needed
+with tf.keras.utils.custom_object_scope({'my_loss_fn': custom_loss_forces(args.loss_ratio)}):  # Adjust the loss_ratio as needed
     mlmm_model = tf.keras.models.load_model(model_path)
 
 # Load data
