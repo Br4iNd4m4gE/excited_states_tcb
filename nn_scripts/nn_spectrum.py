@@ -17,12 +17,12 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, r2_score
 
 sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import shuffle_and_split_train_test, unit_conversions, load_data_excited_states_energies, read_json_config
-from pyNNsMD.nn_pes_src.device import set_gpu
-from pyNNsMD.utils.loss import r2_metric
-from pyNNsMD.models.hp import hpModelBuilder_energy_oscStr
-from pyNNsMD.esp_nn import OutputSpec, get_limits
-from pyNNsMD.layers.wrapper import WrapEnergyModel
+from exsNN.utils.general import shuffle_and_split_train_test, unit_conversions, load_data_excited_states_energies, read_json_config
+from exsNN.nn_pes_src.device import set_gpu
+from exsNN.utils.loss import r2_metric
+from exsNN.models.hp import hpModelBuilder_energy_oscStr
+from exsNN.esp_nn import OutputSpec, get_limits
+from exsNN.layers.wrapper import WrapEnergyModel
 
 ############################ PARSE ARGUMENTS ##################################
 

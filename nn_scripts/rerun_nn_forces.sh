@@ -1,27 +1,27 @@
 #!/home/cschmidt/miniconda3/envs/excited_states_NN_kgcnn/bin/python
 # -*- coding: utf-8 -*-
 
-import sys
-import tensorflow as tf
-from os.path import join, isdir, isfile, dirname, abspath
 import os
-# sys.path.append("/home/cschmidt/bin/excited_states_networks") # pyNNsMD
-sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import parse_single_file, extract_number_of_atoms, get_file_length, gaussian, unit_conversions, load_data_excited_states_forces
-from pyNNsMD.nn_pes_src.device import set_gpu
-from pyNNsMD.utils.loss import custom_loss_forces
+import sys
 import argparse
-#from scipy.spatial.distance import pdist
-import matplotlib as mpl
-mpl.use("Agg")
-import matplotlib.pyplot as plt
-import numpy as np
-from sklearn.metrics import r2_score, mean_absolute_error
-from scipy.optimize import curve_fit
 import subprocess
-from sklearn.preprocessing import StandardScaler
+import numpy as np
+import tensorflow as tf
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import tensorflow.keras.backend as K
 import joblib
+mpl.use("Agg")
+
+from scipy.optimize import curve_fit
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score, mean_absolute_error
+from os.path import join, isdir, isfile, dirname, abspath
+
+sys.path.append(abspath(join(dirname(__file__), "..")))
+from exsNN.utils.general import parse_single_file, extract_number_of_atoms, get_file_length, gaussian, unit_conversions, load_data_excited_states_forces
+from exsNN.nn_pes_src.device import set_gpu
+from exsNN.utils.loss import custom_loss_forces
 
 ap = argparse.ArgumentParser()
 # ap.add_argument("-g", "--gpuid", type=int, required=True, help="GPU ID to use")

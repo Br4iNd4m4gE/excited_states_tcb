@@ -18,10 +18,10 @@ from sklearn.metrics import r2_score, mean_absolute_error
 from sklearn.model_selection import train_test_split
 
 sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import unit_conversions, load_data_excited_states_forces, read_json_config
-from pyNNsMD.nn_pes_src.device import set_gpu
-from pyNNsMD.layers.wrapper import WrapForcesModel
-from pyNNsMD.models.hp import hpModelBuilder_forces
+from exsNN.utils.general import unit_conversions, load_data_excited_states_forces, read_json_config
+from exsNN.nn_pes_src.device import set_gpu
+from exsNN.layers.wrapper import WrapForcesModel
+from exsNN.models.hp import hpModelBuilder_forces
 
 
 ############################ PARSE ARGUMENTS ##################################

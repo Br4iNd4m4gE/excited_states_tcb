@@ -1,15 +1,21 @@
+"""
+Tensorflow keras model definitions for NAC.
+
+There are two definitions: the subclassed NACModel and a precomputed model to 
+multiply with the feature derivative for training, which overwrites training/predict step.
+"""
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras as ks
 
-from pyNNsMD.layers.features import FeatureGeometric
-from pyNNsMD.layers.gradients import PropagateNACGradient2
-from pyNNsMD.layers.mlp import MLP
-from pyNNsMD.layers.normalize import ConstLayerNormalization
-from pyNNsMD.scaler.general import SegmentStandardScaler
+from exsNN.layers.features import FeatureGeometric
+from exsNN.layers.mlp import MLP
+from exsNN.layers.normalize import ConstLayerNormalization
+from exsNN.scaler.general import SegmentStandardScaler
 
 
-class NACModel2(ks.Model):
+class NACModel(ks.Model):
     """
     Subclassed tf.keras.model for NACs which outputs NACs from coordinates.
     
@@ -18,14 +24,14 @@ class NACModel2(ks.Model):
     """
 
     def __init__(self,
-                 atoms,
                  states,
-                 invd_index=None,
+                 atoms,
+                 invd_index,
                  angle_index=None,
                  dihed_index=None,
                  nn_size=100,
                  depth=3,
-                 activ="selu",
+                 activ='selu',
                  use_reg_activ=None,
                  use_reg_weight=None,
                  use_reg_bias=None,
@@ -45,7 +51,7 @@ class NACModel2(ks.Model):
             tf.keras.model.
             
         """
-        super(NACModel2, self).__init__(**kwargs)
+        super(NACModel, self).__init__(**kwargs)
 
         self.in_invd_index = invd_index
         self.in_angle_index = angle_index
@@ -59,12 +65,12 @@ class NACModel2(ks.Model):
         self.use_dropout = use_dropout
         self.dropout = dropout
         self.normalization_mode = normalization_mode
-        self.y_atoms = int(atoms)
+        self.nac_atoms = int(atoms)
         self.in_states = int(states)
+
 
         out_dim = int(states * (states - 1) / 2)
         indim = int(atoms)
-
         # Allow for all distances, backward compatible
         if isinstance(invd_index, bool):
             if invd_index:
@@ -84,14 +90,6 @@ class NACModel2(ks.Model):
         invd_shape = invd_index.shape if use_invd_index else None
         angle_shape = angle_index.shape if use_angle_index else None
         dihed_shape = dihed_index.shape if use_dihed_index else None
-
-        in_model_dim = 0
-        if use_invd_index:
-            in_model_dim += len(invd_index)
-        if use_angle_index:
-            in_model_dim += len(angle_index)
-        if use_dihed_index:
-            in_model_dim += len(dihed_index)
 
         self.feat_layer = FeatureGeometric(invd_shape=invd_shape,
                                            angle_shape=angle_shape,
@@ -114,9 +112,8 @@ class NACModel2(ks.Model):
                              dropout_dropout=dropout,
                              name='mlp'
                              )
-        self.virt_layer = ks.layers.Dense(out_dim * in_model_dim, name='virt', use_bias=False, activation='linear')
-        self.resh_layer = tf.keras.layers.Reshape((out_dim, in_model_dim))
-        self.prop_grad_layer = PropagateNACGradient2(axis=(2, 1))
+        self.virt_layer = ks.layers.Dense(out_dim * indim, name='virt', use_bias=False, activation='linear')
+        self.resh_layer = tf.keras.layers.Reshape((out_dim, indim))
 
         # Build all layers
         self.precomputed_features = False
@@ -141,24 +138,29 @@ class NACModel2(ks.Model):
             with tf.GradientTape() as tape2:
                 tape2.watch(x)
                 feat_flat = self.feat_layer(x)
-            temp_grad = tape2.batch_jacobian(feat_flat, x)
-
-            feat_flat_std = self.std_layer(feat_flat)
-            temp_hidden = self.mlp_layer(feat_flat_std, training=training)
-
-            temp_v = self.virt_layer(temp_hidden)
-            temp_va = self.resh_layer(temp_v)
-            # y_pred = ks.backend.batch_dot(temp_va,temp_grad ,axes=(2,1))
-            y_pred = self.prop_grad_layer([temp_va, temp_grad])
+                feat_flat_std = self.std_layer(feat_flat)
+                temp_hidden = self.mlp_layer(feat_flat_std, training=training)
+                temp_v = self.virt_layer(temp_hidden)
+                temp_va = self.resh_layer(temp_v)
+            temp_grad = tape2.batch_jacobian(temp_va, x)
+            grad = ks.backend.concatenate(
+                [ks.backend.expand_dims(temp_grad[:, :, i, i, :], axis=2) for i in range(self.nac_atoms)], axis=2)
+            y_pred = grad
         else:
             x1 = x[0]
             x2 = x[1]
-            feat_flat_std = self.std_layer(x1)
-            temp_hidden = self.mlp_layer(feat_flat_std, training=training)
-            temp_v = self.virt_layer(temp_hidden)
-            temp_va = self.resh_layer(temp_v)
-            # y_pred = ks.backend.batch_dot(temp_va, x2, axes=(2, 1))
-            y_pred = self.prop_grad_layer([temp_va, x2])
+            with tf.GradientTape() as tape2:
+                tape2.watch(x1)
+                feat_flat_std = self.std_layer(x1)
+                temp_hidden = self.mlp_layer(feat_flat_std, training=training)
+                temp_v = self.virt_layer(temp_hidden)
+                temp_va = self.resh_layer(temp_v)
+            grad = tape2.batch_jacobian(temp_va, x1)
+            # grad = ks.backend.reshape(grad, (ks.backend.shape(x1)[0], self.nac_states,
+            #                                  self.nac_atoms, ks.backend.shape(grad)[2]))
+            grad = ks.backend.batch_dot(grad, x2, axes=(3, 1))
+            y_pred = ks.backend.concatenate(
+                [ks.backend.expand_dims(grad[:, :, i, i, :], axis=2) for i in range(self.nac_atoms)], axis=2)
 
         return y_pred
 
@@ -185,6 +187,7 @@ class NACModel2(ks.Model):
         np_grad = np.concatenate(np_grad, axis=0)
 
         # self.set_const_normalization_from_features(np_x, normalization_mode=normalization_mode)
+
         return np_x, np_grad
 
     def set_const_normalization_from_features(self, feat_x, normalization_mode=None):
@@ -211,13 +214,13 @@ class NACModel2(ks.Model):
         if self.precomputed_features:
             self.set_const_normalization_from_features(kwargs['x'][0])
 
-        return super(NACModel2, self).fit(**kwargs)
+        return super(NACModel, self).fit(**kwargs)
 
     def get_config(self):
-        # conf = super(NACModel2, self).get_config()
+        # conf = super(NACModel, self).get_config()
         conf = {}
         conf.update({
-            'atoms': self.y_atoms,
+            'atoms': self.nac_atoms,
             'states': self.in_states,
             'invd_index': self.in_invd_index,
             'angle_index': self.in_angle_index,
@@ -239,8 +242,8 @@ class NACModel2(ks.Model):
         # copy to new model
         self_conf = self.get_config()
         self_conf['precomputed_features'] = False
-        copy_model = NACModel2(**self_conf)
+        copy_model = NACModel(**self_conf)
         copy_model.set_weights(self.get_weights())
         # Make graph and test with training data
-        copy_model.predict(np.ones((1,self.y_atoms,3)))
+        copy_model.predict(np.ones((1,self.nac_atoms,3)))
         tf.keras.models.save_model(copy_model,filepath,**kwargs)

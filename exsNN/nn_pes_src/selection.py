@@ -5,19 +5,19 @@ import os
 
 import numpy as np
 
-from pyNNsMD.models.mlp_e import EnergyModel
-from pyNNsMD.models.mlp_eg import EnergyGradientModel
-from pyNNsMD.models.mlp_nac import NACModel
-from pyNNsMD.models.mlp_nac2 import NACModel2
-from pyNNsMD.models.mlp_g2 import GradientModel2
+from exsNN.models.mlp_e import EnergyModel
+from exsNN.models.mlp_eg import EnergyGradientModel
+from exsNN.models.mlp_nac import NACModel
+from exsNN.models.mlp_nac2 import NACModel2
+from exsNN.models.mlp_g2 import GradientModel2
 
-from pyNNsMD.nn_pes_src.hypers.hyper_mlp_e import DEFAULT_HYPER_PARAM_ENERGY
-from pyNNsMD.nn_pes_src.hypers.hyper_mlp_eg import DEFAULT_HYPER_PARAM_ENERGY_GRADS
-from pyNNsMD.nn_pes_src.hypers.hyper_mlp_g2 import DEFAULT_HYPER_PARAM_GRADS2
-from pyNNsMD.nn_pes_src.hypers.hyper_mlp_nac import DEFAULT_HYPER_PARAM_NAC
+from exsNN.nn_pes_src.hypers.hyper_mlp_e import DEFAULT_HYPER_PARAM_ENERGY
+from exsNN.nn_pes_src.hypers.hyper_mlp_eg import DEFAULT_HYPER_PARAM_ENERGY_GRADS
+from exsNN.nn_pes_src.hypers.hyper_mlp_g2 import DEFAULT_HYPER_PARAM_GRADS2
+from exsNN.nn_pes_src.hypers.hyper_mlp_nac import DEFAULT_HYPER_PARAM_NAC
 
-from pyNNsMD.scaler.energy import EnergyGradientStandardScaler, EnergyStandardScaler, GradientStandardScaler
-from pyNNsMD.scaler.nac import NACStandardScaler
+from exsNN.scaler.energy import EnergyGradientStandardScaler, EnergyStandardScaler, GradientStandardScaler
+from exsNN.scaler.nac import NACStandardScaler
 
 
 def get_default_hyperparameters_by_modeltype(model_type):

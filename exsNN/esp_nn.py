@@ -2,11 +2,11 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras as ks
 
-from pyNNsMD.layers.mlp import MLP
-from pyNNsMD.layers.normalize import ConstLayerNormalization
-from pyNNsMD.layers.features import FeatureGeometric
-from pyNNsMD.utils.loss import r2_metric
-from pyNNsMD.nn_pes_src.device import set_gpu
+from exsNN.layers.mlp import MLP
+from exsNN.layers.normalize import ConstLayerNormalization
+from exsNN.layers.features import FeatureGeometric
+from exsNN.utils.loss import r2_metric
+from exsNN.nn_pes_src.device import set_gpu
 
 from sklearn.preprocessing import StandardScaler
 

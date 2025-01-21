@@ -1,31 +1,29 @@
 #!/home/cschmidt/miniconda3/envs/excited_states_NN_kgcnn/bin/python
 # -*- coding: utf-8 -*-
 
-import sys
-import tensorflow as tf
-from os.path import join, isdir, isfile, dirname, abspath
 import os
-# sys.path.append("/home/cschmidt/bin/excited_states_networks") # pyNNsMD
-sys.path.append(abspath(join(dirname(__file__), "..")))
-from pyNNsMD.utils.general import parse_single_file
-from pyNNsMD.nn_pes_src.device import set_gpu
-import argparse
-#from scipy.spatial.distance import pdist
-import matplotlib as mpl
-mpl.use("Agg")
-import matplotlib.pyplot as plt
-import numpy as np
-from sklearn.metrics import r2_score, mean_absolute_error
-from scipy.optimize import curve_fit
-import subprocess
-from ase import Atoms
-from ase.io import write
+import sys
 import shutil
 import logging
+import argparse
+import subprocess
+import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+mpl.use("Agg")
+
+from os.path import join, isdir, isfile, dirname, abspath
+from sklearn.metrics import r2_score, mean_absolute_error
+from scipy.optimize import curve_fit
+from ase import Atoms
+from ase.io import write
+
+sys.path.append(abspath(join(dirname(__file__), "..")))
+from exsNN.utils.general import parse_single_file
+from exsNN.nn_pes_src.device import set_gpu
 
 ap = argparse.ArgumentParser()
-# ap.add_argument("-g", "--gpuid", type=int)
-# ap.add_argument("-p", "--outname") # wird ggf. ignoriert
 ap.add_argument("model", help="Path to the model")
 args = ap.parse_args()
 # set_gpu([args.gpuid])          ###############  wichtig !!

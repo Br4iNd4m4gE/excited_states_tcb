@@ -10,7 +10,7 @@ import os
 import subprocess
 import sys
 
-from pyNNsMD.nn_pes_src.selection import get_path_for_fit_script
+from exsNN.nn_pes_src.selection import get_path_for_fit_script
 
 
 def fit_model_get_python_cmd_os():

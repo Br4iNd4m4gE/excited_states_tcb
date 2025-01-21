@@ -4,17 +4,15 @@ import sys
 import numpy as np
 from tensorflow import keras
 from tensorflow.keras import layers
-from pyNNsMD.layers.gradients import EnergyGradientLayer
-from pyNNsMD.utils.loss import custom_loss_forces
 from itertools import combinations
-from os.path import join, dirname, abspath
 
-sys.path.append(abspath(join(dirname(__file__), "..", "..")))
-from pyNNsMD.esp_nn import build_geom_preprocess_layer, ScaledMeanAbsoluteError, precompute_feature_in_chunks
-from pyNNsMD.layers.mlp import MLP
-from pyNNsMD.scaler.general import ScalingLayer
-from pyNNsMD.layers.normalize import NormalizationLayer
-from pyNNsMD.layers.features import InverseDistance_with_ESP
+from exsNN.layers.gradients import EnergyGradientLayer
+from exsNN.utils.loss import custom_loss_forces
+from exsNN.esp_nn import build_geom_preprocess_layer, ScaledMeanAbsoluteError, precompute_feature_in_chunks
+from exsNN.layers.mlp import MLP
+from exsNN.scaler.general import ScalingLayer
+from exsNN.layers.normalize import NormalizationLayer
+from exsNN.layers.features import InverseDistance_with_ESP
 
 class hpModelBuilder_forces:
     """
