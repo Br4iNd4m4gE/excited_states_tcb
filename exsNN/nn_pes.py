@@ -13,8 +13,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from exsNN.datasets.general import model_save_data_to_folder, model_make_random_shuffle, model_merge_data_in_chunks, \
-    index_make_random_shuffle
+from exsNN.datasets.general import model_save_data_to_folder, model_make_random_shuffle, model_merge_data_in_chunks, index_make_random_shuffle
 from exsNN.nn_pes_src.fit import fit_model_by_modeltype
 from exsNN.nn_pes_src.selection import get_default_scaler
 from exsNN.nn_pes_src.selection import get_model_by_type, get_default_hyperparameters_by_modeltype
