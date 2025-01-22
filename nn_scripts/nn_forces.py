@@ -4,8 +4,9 @@ for the ML-MM GROMACS implementation.'''
 
 import numpy as np
 import sys
-import argparse
 import joblib
+import argparse
+import shutil
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow.keras.backend as K
@@ -97,6 +98,10 @@ y_train_scaled, y_test_scaled = scaler.transform(y_train), scaler.transform(y_te
 
 ## 2. Hyperparameter search
 
+# Remove old outputtuner directory
+if isdir("trials"):
+	shutil.rmtree("trials")
+
 # Initialize ModelBuilder
 model_builder = hpModelBuilder_forces(hp_dict, n_atoms, x_train)
 
@@ -111,9 +116,6 @@ best_model = tuner.hypermodel.build(best_hps)
 
 # Train the best model
 hist = best_model.fit(x_train, y_train_scaled, batch_size=batch_size, epochs=fit_epochs, verbose=2, validation_split=0.2)
-
-# # Save the model
-# best_model.save("best_model")
 
 # Wrap the model for MLMM
 mlmm_model = WrapForcesModel(best_model, scaler.mean_, 1.0)

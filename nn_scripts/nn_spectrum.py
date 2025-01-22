@@ -104,7 +104,7 @@ EhtoeV = unit_conversions["EhtoeV"]
 ## 1. Data Preparation
 
 # Load and preprocess data
-xyz_esp_data, energies, natoms, ntotal = load_data_excited_states_energies(inputfile, lines_to_skip) # energies and osc. str.
+xyz_esp_data, energies, natoms, ntotal = load_data_excited_states_energies(inputfile, lines_to_skip) # energies and osc. str. -> coords in Bohr, esp_grads in atomic units
 print(f"Number of Data points in the input file {inputfile} is {len(xyz_esp_data)}")
 
 # Shuffle and split data
@@ -118,8 +118,10 @@ esp_test  = esp_grads_test[:, :, 0]
 # Check whether ESP data is included in the training data
 if esp_train.shape[1] == 0:
     esp_in_traindata = False
+    print(">>>>> ESP data not included in training data.")
 else:
     esp_in_traindata = True
+    print(">>>>> ESP data included in training data.")
 
 # Store train and test data
 data = {"coords": coords_train, "esp": esp_train, "targets": targets_train}
@@ -129,7 +131,7 @@ targetscaler = StandardScaler()
 data["targets_scaled"] = targetscaler.fit_transform(data["targets"].reshape(-1, 2))
 
 # otput_spec with scaler being already fitted to energy -> Must come after scaler.fit
-output_spec = { # this is ugly, as output_spec is needed in hp_simple_model()
+output_spec = { # this is ugly, as output_spec is needed in hpModelBuilder_energy_oscStr()
     "QM/MM energy" : OutputSpec(from_subnets = "monolith",
                                 scaler = targetscaler
                                 )                                                
@@ -151,7 +153,7 @@ y_train = data["targets_scaled"]
 
 # Remove old outputtuner directory
 if clean_up_hpoutpath:
-    if os.path.isdir(hp_out_path): # this is needed if tuner quits with "INFO:tensorflow:Oracle triggered exit"
+    if isdir(hp_out_path): # comment of Manu: this is needed if tuner quits with "INFO:tensorflow:Oracle triggered exit" -> My comment: I think this is not needed
         shutil.rmtree(hp_out_path)
 
 # Initialize ModelBuilder
@@ -167,7 +169,7 @@ best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs
 hp_model = tuner.hypermodel.build(best_hps)
 
 # Train the best model
-hp_hist = hp_model.fit(x_train, data["targets_scaled"], epochs=epochs, validation_split=0.1, verbose=2, callbacks=callbacks)
+hp_hist = hp_model.fit(x_train, y_train, epochs=epochs, validation_split=0.1, verbose=2, callbacks=callbacks)
 
 # Wrap the model
 wrapped_model = WrapEnergyModel(hp_model, targetscaler.mean_, targetscaler.var_)
