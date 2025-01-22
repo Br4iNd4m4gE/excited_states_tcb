@@ -8,11 +8,13 @@ from itertools import combinations
 
 from exsNN.layers.gradients import EnergyGradientLayer
 from exsNN.utils.loss import custom_loss_forces
-from exsNN.esp_nn import build_geom_preprocess_layer, ScaledMeanAbsoluteError, precompute_feature_in_chunks
+from exsNN.esp_nn import ScaledMeanAbsoluteError
 from exsNN.layers.mlp import MLP
 from exsNN.scaler.general import ScalingLayer
 from exsNN.layers.normalize import NormalizationLayer
 from exsNN.layers.features import InverseDistance_with_ESP
+from exsNN.layers.normalize import ConstLayerNormalization
+from exsNN.layers.features import FeatureGeometric
 
 class hpModelBuilder_forces:
     """
@@ -123,17 +125,34 @@ class hpModelBuilder_energy_oscStr:
         # 0. create interatomic distance matrix
         geom_idx = [(i,j) for i,j in combinations(range(self.natoms), 2)]
         interatomic_dists = np.array(geom_idx) # this is [ [0,1],[0,2],...,[83,84] ]
-        geom_in, geom_prep = build_geom_preprocess_layer(self.natoms, interatomic_dists, self.norm)
+        # geom_in, geom_prep = build_geom_preprocess_layer(self.natoms, interatomic_dists)
 
-        # # Add scaling layer
-        # geom_prep = ScalingLayer(self.coords_scale_mean, self.coords_scale_std)(geom_prep)
+        # 1. Create .....
+        geom_shape = (self.natoms, 3)
+        geom_in = keras.Input(shape=geom_shape, dtype='float32', name='geo_input')
+
+        # Add scaling layer
+        geom_in = ScalingLayer(self.coords_scale_mean, self.coords_scale_std)(geom_in)
+
+        # feature calculation layer
+        feat_layer = FeatureGeometric(invd_shape=interatomic_dists.shape, name="feat_layer")
+        
+        # which interatomic distances to use
+        feat_layer.set_mol_index(interatomic_dists, None, None)
+
+        # make 1D
+        full = keras.layers.Flatten(name='feat_flat')(geom_in)
+        full = feat_layer(geom_in)
+        
+        # normalization of features: norm over entire training set, using set_const_normalization_from_features
+        geom_prep = ConstLayerNormalization(name="feat_std")(full)
+
 
         # 2. Esp_in
         esp_in = keras.Input(shape=(self.natoms, ), dtype='float32', name='esp_input')
 
         # 3. Concat
         rep = keras.layers.Concatenate(name="concat_layer")([geom_prep, esp_in]) # representation of inputs
-        inputs_list = [geom_in, esp_in] # actual inputs
 
         # 4. MLP with HP search
         neurons = hp.Int("nn_size", self.hp_dict["neurons_min"], self.hp_dict["neurons_max"], self.hp_dict["neurons_step"])
@@ -153,6 +172,7 @@ class hpModelBuilder_energy_oscStr:
                         name="out_vom_mlp")(mlp(rep))
         
         # 6. Model
+        inputs_list = [geom_in, esp_in] # actual inputs
         model = keras.Model(inputs=inputs_list, outputs=final_layer) # maybe [final_layer]?
         hp_learning_rate = hp.Choice("learning_rate", values=self.hp_dict["learning_rates"])
         opti = keras.optimizers.Adam(learning_rate=hp_learning_rate)
