@@ -100,7 +100,7 @@ class hpModelBuilder_energy_oscStr:
     """
     Class for HP search for energy + oscillator strength NN.
     """
-    def __init__(self, hp_dict, natoms, dense_activ, final_activ, output_spec, loss, r2_metric, norm, all_input_coords_to_normalize):
+    def __init__(self, hp_dict, natoms, dense_activ, final_activ, output_spec, loss, r2_metric, norm, coords_scale_mean, coords_scale_std, feat_coords_mean, feat_coords_std):
         self.hp_dict = hp_dict
         self.natoms = natoms
         self.dense_activ = dense_activ
@@ -109,19 +109,10 @@ class hpModelBuilder_energy_oscStr:
         self.loss = loss
         self.r2_metric = r2_metric
         self.norm = norm
-
-        # Precompute normalization parameters (for normalization of inv distance layer). Needs all input coords
-        feat_precomp = precompute_feature_in_chunks(all_input_coords_to_normalize, self.build_initial_model(), batch_size=32)
-        self.feat_coords_mean = np.mean(feat_precomp, axis=0, keepdims=True) # inv distance mean
-        self.feat_coords_std = np.std(feat_precomp, axis=0, keepdims=True)
-
-    def build_initial_model(self):
-        """ Build an initial model to precompute features for normalization. """
-        geom_idx = [(i,j) for i,j in combinations(range(self.natoms), 2)]
-        interatomic_dists = np.array(geom_idx)
-        geom_in, geom_prep = build_geom_preprocess_layer(self.natoms, interatomic_dists, self.norm)
-        model = keras.Model(inputs=geom_in, outputs=geom_prep)
-        return model
+        self.coords_scale_mean = coords_scale_mean
+        self.coords_scale_std = coords_scale_std
+        self.feat_coords_mean = feat_coords_mean
+        self.feat_coords_std = feat_coords_std
 
     def build_model(self, hp):
         """ Building up the esp-model for hyperparametersearch. This is a modified 
@@ -134,15 +125,15 @@ class hpModelBuilder_energy_oscStr:
         interatomic_dists = np.array(geom_idx) # this is [ [0,1],[0,2],...,[83,84] ]
         geom_in, geom_prep = build_geom_preprocess_layer(self.natoms, interatomic_dists, self.norm)
 
-        # Add scaling layer
-        geom_prep = ScalingLayer(self.feat_coords_mean, self.feat_coords_std)(geom_prep)
+        # # Add scaling layer
+        # geom_prep = ScalingLayer(self.coords_scale_mean, self.coords_scale_std)(geom_prep)
 
         # 2. Esp_in
-        esp_in = keras.Input(shape=(self.natoms,), dtype='float32', name='esp_input')
+        esp_in = keras.Input(shape=(self.natoms, ), dtype='float32', name='esp_input')
 
         # 3. Concat
-        rep = keras.layers.Concatenate(name="concat_layer")([geom_prep, esp_in])
-        inputs_list = [geom_in, esp_in]
+        rep = keras.layers.Concatenate(name="concat_layer")([geom_prep, esp_in]) # representation of inputs
+        inputs_list = [geom_in, esp_in] # actual inputs
 
         # 4. MLP with HP search
         neurons = hp.Int("nn_size", self.hp_dict["neurons_min"], self.hp_dict["neurons_max"], self.hp_dict["neurons_step"])
@@ -183,11 +174,12 @@ class hpModelBuilder_energy_oscStr:
         # 9. Set normalization parameters
         # # The layer calculating inverse distances ist the first layer of the model. The result of this layer is used to fit the normalization layer (x -> x-µ/std).
         # # Basically a normalization layer is fitted to the inverse distances.
-        model.get_layer('feat_std').set_weights([self.feat_coords_mean, self.feat_coords_std])
+        if self.feat_coords_mean is not None and self.feat_coords_std is not None:
+            model.get_layer('feat_std').set_weights([self.feat_coords_mean, self.feat_coords_std])
         return model
     
     def perform_hp_search(self, x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_outpath):
         tuner = kt.Hyperband(self.build_model, objective=kt.Objective("val_r2_metric", "max"), max_epochs=hp_maxepochs, factor=hp_factor, directory=hp_outpath)
-        tuner.search(x = x_train, y = y_train, verbose=2, epochs=hp_maxepochs, validation_split=0.1, callbacks=callbacks, batch_size=64)
+        tuner.search(x=x_train, y=y_train, verbose=2, epochs=hp_maxepochs, validation_split=0.1, callbacks=callbacks, batch_size=64)
         best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
         return best_hps, tuner

@@ -169,11 +169,13 @@ def build_geom_preprocess_layer(natoms, interatomic_dists, norm="const"):
 
     geom_shape = (natoms, 3)
     geom_in = ks.Input(shape=geom_shape, dtype='float32', name='geo_input')
+
     # feature calculation layer
-    feat_layer = FeatureGeometric(invd_shape = interatomic_dists.shape, 
-                                  name="feat_layer")
+    feat_layer = FeatureGeometric(invd_shape=interatomic_dists.shape, name="feat_layer")
+    
     # which interatomic distances to use
     feat_layer.set_mol_index(interatomic_dists, None, None)
+
     # make 1D
     full = ks.layers.Flatten(name='feat_flat')(geom_in)
     full = feat_layer(geom_in)

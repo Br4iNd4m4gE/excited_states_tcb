@@ -12,6 +12,7 @@ import tensorflow.keras as ks
 import matplotlib as mpl
 mpl.use('Agg')
 
+from keras_tuner import HyperParameters
 from os.path import join, isdir, isfile, dirname, abspath
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, r2_score
@@ -21,7 +22,7 @@ from exsNN.utils.general import shuffle_and_split_train_test, unit_conversions, 
 from exsNN.nn_pes_src.device import set_gpu
 from exsNN.utils.loss import r2_metric
 from exsNN.models.hp import hpModelBuilder_energy_oscStr
-from exsNN.esp_nn import OutputSpec, get_limits
+from exsNN.esp_nn import OutputSpec, get_limits, precompute_feature_in_chunks
 from exsNN.layers.wrapper import WrapEnergyModel
 
 ############################ PARSE ARGUMENTS ##################################
@@ -137,11 +138,28 @@ output_spec = { # this is ugly, as output_spec is needed in hpModelBuilder_energ
                                 )                                                
 }
 
+# Scaling of coordinates - for adding a first scaling layer of the coordinates
+coordscaler = StandardScaler()
+coords_scale_mean, coords_scale_std = coordscaler.fit(data["coords"].reshape(-1, 3)).mean_, coordscaler.scale_
+
+# Initialize ModelBuilder - needs to be performed before the precompute features (because you nee a specific layer of the network for precomputing features of inv. dist. layer)
+model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm, coords_scale_mean, coords_scale_std, None, None)
+
+# Precompute features (inverted distances) - for adding a scaling layer of the features
+dummy_hp = HyperParameters()
+feat_precomp = precompute_feature_in_chunks(data["coords"], model_builder.build_model(dummy_hp), batch_size=32)
+feat_coords_mean, feat_coords_std = np.mean(feat_precomp, axis=0, keepdims=True), np.std(feat_precomp, axis=0, keepdims=True)
+
+# Set normalization parameters for the model - for adding a scaling layer of the features
+# Otherwise the model would be initiated with normalization layer with means = 0 and std = 1.
+model_builder.feat_coords_mean, model_builder.feat_coords_std = feat_coords_mean, feat_coords_std
+
 # Define x_train and y_train
 x_train   = [data["coords"], data["esp"]]
 callbacks = [stop_early, lr_reduction]
 x_test    = [coords_test, esp_test]
 y_train   = data["targets_scaled"]
+
 
 ## 2. Hyperparameter Search
 
@@ -150,8 +168,8 @@ if clean_up_hpoutpath:
     if isdir(hp_out_path): # comment of Manu: this is needed if tuner quits with "INFO:tensorflow:Oracle triggered exit" -> My comment: I think this is not needed
         shutil.rmtree(hp_out_path)
 
-# Initialize ModelBuilder
-model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm, data["coords"])
+# # Initialize ModelBuilder
+# model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm, coords_scale_mean, coords_scale_std, feat_coords_mean, feat_coords_std)
 
 # Perform hyperparameter search
 best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_out_path)
