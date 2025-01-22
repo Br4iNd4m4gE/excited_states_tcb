@@ -116,12 +116,12 @@ esp_train = esp_grads_train[:, :, 0] # esp_grads_train can include esp + esp_gra
 esp_test  = esp_grads_test[:, :, 0]
 
 # Check whether ESP data is included in the training data
-if esp_train.shape[1] == 0:
-    esp_in_traindata = False
-    print(">>>>> ESP data not included in training data.")
-else:
-    esp_in_traindata = True
-    print(">>>>> ESP data included in training data.")
+# if esp_train.shape[1] == 0:
+#     esp_in_traindata = False
+#     print(">>>>> ESP data not included in training data.")
+# else:
+#     esp_in_traindata = True
+#     print(">>>>> ESP data included in training data.") <------------- Check whether any ESP is != 0 in data
 
 # Store train and test data
 data = {"coords": coords_train, "esp": esp_train, "targets": targets_train}
@@ -138,16 +138,10 @@ output_spec = { # this is ugly, as output_spec is needed in hpModelBuilder_energ
 }
 
 # Define x_train and y_train
-if esp_in_traindata:
-    x_train   = [data["coords"], data["esp"]]
-    callbacks = [stop_early, lr_reduction]
-    x_test    = [coords_test, esp_test]
-else:
-    x_train   = data["coords"]
-    callbacks = [stop_early]
-    x_test    = coords_test
-
-y_train = data["targets_scaled"]
+x_train   = [data["coords"], data["esp"]]
+callbacks = [stop_early, lr_reduction]
+x_test    = [coords_test, esp_test]
+y_train   = data["targets_scaled"]
 
 ## 2. Hyperparameter Search
 
@@ -157,7 +151,7 @@ if clean_up_hpoutpath:
         shutil.rmtree(hp_out_path)
 
 # Initialize ModelBuilder
-model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm, data["coords"])
+model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm, data["coords"])
 
 # Perform hyperparameter search
 best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_out_path)

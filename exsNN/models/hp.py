@@ -100,10 +100,9 @@ class hpModelBuilder_energy_oscStr:
     """
     Class for HP search for energy + oscillator strength NN.
     """
-    def __init__(self, hp_dict, natoms, esp_in_traindata, dense_activ, final_activ, output_spec, loss, r2_metric, norm, all_input_coords_to_normalize):
+    def __init__(self, hp_dict, natoms, dense_activ, final_activ, output_spec, loss, r2_metric, norm, all_input_coords_to_normalize):
         self.hp_dict = hp_dict
         self.natoms = natoms
-        self.esp_in_traindata = esp_in_traindata
         self.dense_activ = dense_activ
         self.final_activ = final_activ
         self.output_spec = output_spec
@@ -138,16 +137,12 @@ class hpModelBuilder_energy_oscStr:
         # Add scaling layer
         geom_prep = ScalingLayer(self.feat_coords_mean, self.feat_coords_std)(geom_prep)
 
-        if self.esp_in_traindata:
-            # 2. Esp_in
-            esp_in = keras.Input(shape=(self.natoms,), dtype='float32', name='esp_input')
+        # 2. Esp_in
+        esp_in = keras.Input(shape=(self.natoms,), dtype='float32', name='esp_input')
 
-            # 3. Concat
-            rep = keras.layers.Concatenate(name="concat_layer")([geom_prep, esp_in])
-            inputs_list = [geom_in, esp_in]
-        else:
-            rep = geom_prep
-            inputs_list = [geom_in]
+        # 3. Concat
+        rep = keras.layers.Concatenate(name="concat_layer")([geom_prep, esp_in])
+        inputs_list = [geom_in, esp_in]
 
         # 4. MLP with HP search
         neurons = hp.Int("nn_size", self.hp_dict["neurons_min"], self.hp_dict["neurons_max"], self.hp_dict["neurons_step"])

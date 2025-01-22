@@ -129,7 +129,7 @@ def precompute_feature_in_chunks(x, model, batch_size):
     for i in range(int(np.ceil(len(x) / batch_size))):
         a = int(batch_size * i)
         b = int(batch_size * i + batch_size)
-        tf_x = tf.convert_to_tensor(x[a:b], dtype=tf.float32)
+        tf_x = tf.convert_to_tensor(x[a: b], dtype=tf.float32)
         feat_pred = model.get_layer("feat_layer")(tf_x, training=False)
         np_x.append(np.array(feat_pred.numpy()))
     np_x = np.concatenate(np_x, axis=0)
