@@ -78,6 +78,10 @@ stop_early = tf.keras.callbacks.EarlyStopping(
     restore_best_weights = True
 )
 
+# Store path of the data file and config file
+print(f"Data file: {inputfile}")
+print(f"Config file: {config_file}")
+
 ############################ START OF SCRIPT ##################################
 
 ## 1. Load data

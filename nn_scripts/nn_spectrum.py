@@ -101,8 +101,8 @@ lr_reduction = ks.callbacks.ReduceLROnPlateau(
 EhtoeV = unit_conversions["EhtoeV"]
 
 # Store path of the data and config file
-print(f"Data file: {inputfile}")
-print(f"Config file: {config_file}")
+print(f"> Data file: {inputfile}")
+print(f"> Config file: {config_file}")
 
 ############################ START OF SCRIPT ##################################
 
