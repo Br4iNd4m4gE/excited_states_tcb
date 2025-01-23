@@ -122,29 +122,27 @@ class hpModelBuilder_energy_oscStr:
         main architecture is fixed. You may vary number of neurons in MLP layer,
         the depth, the l1 or l2 regularization and the learning rate for now."""
 
-        # 0. create interatomic distance matrix
+        # 0. Create interatomic distance matrix
         geom_idx = [(i,j) for i,j in combinations(range(self.natoms), 2)]
         interatomic_dists = np.array(geom_idx) # this is [ [0,1],[0,2],...,[83,84] ]
-        # geom_in, geom_prep = build_geom_preprocess_layer(self.natoms, interatomic_dists)
 
-        # 1. Create .....
+
+        # 1. Create NN inputs of coordinates
         geom_shape = (self.natoms, 3)
         geom_in = keras.Input(shape=geom_shape, dtype='float32', name='geo_input')
 
-        # Add scaling layer
+        # Scaling layer - for coordinates
         geom_in = ScalingLayer(self.coords_scale_mean, self.coords_scale_std)(geom_in)
 
-        # feature calculation layer
+        # Feature layer - inverted distances
         feat_layer = FeatureGeometric(invd_shape=interatomic_dists.shape, name="feat_layer")
-        
-        # which interatomic distances to use
-        feat_layer.set_mol_index(interatomic_dists, None, None)
+        feat_layer.set_mol_index(interatomic_dists, None, None) # which interatomic distances to use
 
-        # make 1D
+        # Flatten input and connect to feature layer
         full = keras.layers.Flatten(name='feat_flat')(geom_in)
         full = feat_layer(geom_in)
         
-        # normalization of features: norm over entire training set, using set_const_normalization_from_features
+        # Normalization layer - normalization of features: norm over entire training set, using set_const_normalization_from_features
         geom_prep = ConstLayerNormalization(name="feat_std")(full)
 
 
@@ -154,7 +152,7 @@ class hpModelBuilder_energy_oscStr:
         # 3. Concat
         rep = keras.layers.Concatenate(name="concat_layer")([geom_prep, esp_in]) # representation of inputs
 
-        # 4. MLP with HP search
+        # 4. Build MLP
         neurons = hp.Int("nn_size", self.hp_dict["neurons_min"], self.hp_dict["neurons_max"], self.hp_dict["neurons_step"])
         hp_layer_depth = hp.Int("depth", self.hp_dict["layers_min"], self.hp_dict["layers_max"], self.hp_dict["layers_step"])
         hp_regularizer = self.hp_dict["regulizer"]
@@ -165,7 +163,7 @@ class hpModelBuilder_energy_oscStr:
                     dense_kernel_regularizer=hp_regularizer,
                     name="monolith")
         
-        # 5. Output layer
+        # 5. Complete model
         final_layer = keras.layers.Dense(2, 
                         activation=self.final_activ, 
                         use_bias=True, 
