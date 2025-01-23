@@ -79,8 +79,8 @@ stop_early = tf.keras.callbacks.EarlyStopping(
 )
 
 # Store path of the data file and config file
-print(f"Data file: {inputfile}")
-print(f"Config file: {config_file}")
+print(f"> Data file: {inputfile}")
+print(f"> Config file: {config_file}")
 
 ############################ START OF SCRIPT ##################################
 
