@@ -53,31 +53,11 @@ export WANDB_MODE=offline # no internet connection during calculation on nodes
 # For data readin in kgcnn
 export BABEL_DATADIR="/usr/local/run/openbabel-2.4.1"
 
-# export PATH="/home/lpetersen/anaconda_interpreter/bin:$PATH"
-
-# if [[ "$pythonfile" == *"forces"* ]]; then
-#     source /home/lpetersen/anaconda_interpreter/etc/profile.d/conda.sh # from lukas, this is for forces
-#     conda activate kgcnn_new
-# elif [[ "$pythonfile" == *"spectrum"* ]]; then
-#     # source /home/cschmidt/miniconda3/bin/activate excited_states_NN_from_monja # for nn_spectrum, this is for spectrum (based on an environment from monja)
-#     # conda activate excited_states_NN_from_monja
-#     source /home/lpetersen/anaconda_interpreter/etc/profile.d/conda.sh
-#     conda activate kgcnn_new
-# else
-#     echo "Error: Unknown python file type"
-#     exit 1
-# fi
-
 source /home/cschmidt/miniconda3/bin/activate excited_states_NN_kgcnn
 conda activate excited_states_NN_kgcnn
 
-# Deprecated CUDA setting on server
-# export XLA_FLAGS="--xla_gpu_cuda_data_dir=/usr/lib/cuda"
-# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/run/cuda/lib
-
-# Even older deprecated CUDA setting on server
-#CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))
-#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib
+# source /home/cschmidt/miniconda3/bin/activate excited_states_NN_from_monja
+# conda activate excited_states_NN_from_monja
 
 # set OpenMP parallel threads variable:
 export OMP_NUM_THREADS=$cores
