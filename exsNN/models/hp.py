@@ -159,8 +159,8 @@ class hpModelBuilder_energy_oscStr:
         mlp = MLP(dense_units=neurons,
                     dense_depth=hp_layer_depth,
                     dense_activ=self.dense_activ,
-                    dense_activ_last=self.dense_activ,
-                    dense_kernel_regularizer=hp_regularizer,
+                    dense_activ_last=self.dense_activ, # difference from OG model
+                    dense_kernel_regularizer=hp_regularizer, # difference from OG model
                     name="monolith")
         
         # 5. Complete model
