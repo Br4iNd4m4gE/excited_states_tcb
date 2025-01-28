@@ -211,8 +211,8 @@ osc_pred = model_pred[:, 1]
 osc_ref  = targets_test[:, 1]
 
 # Calculate MAE
-test_mae_eV  = mean_absolute_error(energies_ref_eV, model_pred_eV)
-test_mae_osc = mean_absolute_error(osc_ref, osc_pred)
+MAE_energy  = mean_absolute_error(energies_ref_eV, model_pred_eV)
+MAE_osc = mean_absolute_error(osc_ref, osc_pred)
 
 # Evaluate (scaled) model -> the model without the wrapper (true performance of model)
 ref_scaled = targetscaler.transform(targets_test.reshape(-1,2))
@@ -224,6 +224,8 @@ R2_total  = hp_metrics[2]
 R2_energy = r2_score(ref_scaled[:, 0], model_pred_scaled[:, 0])
 R2_osc    = r2_score(ref_scaled[:, 1], model_pred_scaled[:, 1])
 
+MAE_total = hp_metrics[1]
+
 # Get best hyperparameters
 best_hps_config_str = "\t" + "\n\t".join([f"{key}: {value}" for key, value in best_hps.get_config()["values"].items()])
 
@@ -232,13 +234,14 @@ print("\n\n", 70 * "-", "\n\t\t\t\t\t\t\t\tSummary\n", 70 * "-")
 print("\n> Properties of final model")
 print(best_hps_config_str)
 
-print("\n> Performance of final model")
-print(f"\ttest loss: {hp_metrics[0]} atomic units")
-print(f"\ttest MAE energy: {test_mae_eV} eV")
-print(f"\ttest MAE osc: {test_mae_osc}")
-print(f"\ttest R2 energy: {R2_energy}\n")
-print(f"\ttest R2 osc: {R2_osc}")
-print(f"\ttest R2 (combined): {R2_total}")
+print("\n> Performance of final model (Testing)")
+print(f"\t loss: {hp_metrics[0]} atomic units\n")
+print(f"\tMAE energy: {MAE_energy} eV")
+print(f"\tR2 energy: {R2_energy}\n")
+print(f"\tMAE osc: {MAE_osc}")
+print(f"\tR2 osc: {R2_osc}\n")
+print(f"\tMAE (combined)): {MAE_total} atomic units")
+print(f"\tR2 (combined): {R2_total}\n")
 print(f"\tbest epoch: {hp_best_epoch_idx}")
 
 # Save data of energies and oscillator strengths of predictions and references
