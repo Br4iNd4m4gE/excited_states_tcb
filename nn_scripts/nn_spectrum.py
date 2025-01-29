@@ -203,8 +203,10 @@ osc_ref  = targets_test[:, 1]
 n_digits = 4
 
 # Calculate MAE
-MAE_energy  = round(mean_absolute_error(energies_ref_eV, model_pred_eV), n_digits)
-MAE_osc = round(mean_absolute_error(osc_ref, osc_pred), n_digits)
+MAE_energy  = mean_absolute_error(energies_ref_eV, model_pred_eV)
+MAE_osc = mean_absolute_error(osc_ref, osc_pred)
+
+print("TEST: ", MAE_energy, MAE_osc)
 
 # Evaluate (scaled) model -> the model without the wrapper (true performance of model)
 ref_scaled = targetscaler.transform(targets_test.reshape(-1,2))
@@ -212,11 +214,11 @@ hp_metrics = hp_model.evaluate(x_test, ref_scaled)
 model_pred_scaled = hp_model.predict(x_test) # the direct output of the model (before the wrapper)
 
 # Extract performance metrics
-R2_total  = round(hp_metrics[2], n_digits)
-R2_energy = round(r2_score(ref_scaled[:, 0], model_pred_scaled[:, 0]), n_digits)
-R2_osc    = round(r2_score(ref_scaled[:, 1], model_pred_scaled[:, 1]), n_digits)
+R2_total  = hp_metrics[2]
+R2_energy = r2_score(ref_scaled[:, 0], model_pred_scaled[:, 0])
+R2_osc    = r2_score(ref_scaled[:, 1], model_pred_scaled[:, 1])
 
-MAE_total = round(hp_metrics[1], n_digits)
+MAE_total = hp_metrics[1]
 
 # Get best hyperparameters
 best_hps_config_str = "\t" + "\n\t".join([f"{key}: {value}" for key, value in best_hps.get_config()["values"].items()])
@@ -226,17 +228,17 @@ print("\n\n", 70 * "-", "\n\t\t\t\t\t\t\t\tSummary\n", 70 * "-")
 print("\n> Properties of final model")
 print(best_hps_config_str)
 
-print("\n> Performance of final model (Testing)\n")
+print("\n> Testing: Performance of final model\n")
 print(f"\t> loss: {hp_metrics[0]} atomic units\n")
 print(f"\t> Energy:")
-print(f"\t\tMAE: {MAE_energy} eV")
-print(f"\t\tR2: {R2_energy}\n")
+print(f"\t\tMAE: {MAE_energy:.{n_digits}f} eV")
+print(f"\t\tR2: {R2_energy:.{n_digits}f}\n")
 print(f"\t> Oscillator Strength:")
-print(f"\t\tMAE: {MAE_osc} arbitrary units")
-print(f"\t\tR2: {R2_osc}\n")
+print(f"\t\tMAE: {MAE_osc:.{n_digits}f} arbitrary units")
+print(f"\t\tR2: {R2_osc:.{n_digits}f}\n")
 print(f"\t> Combined:")
-print(f"\t\tMAE: {MAE_total} combined units")
-print(f"\t\tR2: {R2_total}\n")
+print(f"\t\tMAE: {MAE_total:.{n_digits}f} combined units")
+print(f"\t\tR2: {R2_total:.{n_digits}f}\n")
 print(f"\t> Best epoch: {hp_best_epoch_idx}\n")
 
 # Save data of energies and oscillator strengths of predictions and references
