@@ -69,17 +69,23 @@ class hpModelBuilder_forces:
     def build_model(self, hp):
         # Define the model
         inputs = keras.Input(shape=(self.n_atoms, 4,))
-        l2_penalty = hp.Choice("l2_penalty", self.hp_dict["l2_penalty"])
+        # l2_penalty = hp.Choice("l2_penalty", self.hp_dict["l2_penalty"])
         initial_lr = hp.Choice("initial_lr", self.hp_dict["initial_lr"])
         neurons = hp.Int("neurons", self.hp_dict["neurons_min"], self.hp_dict["neurons_max"], self.hp_dict["neurons_step"])
         prepped = self.preprocessor(inputs)
         normed = self.normalizer(prepped)
 
         # Build the model
-        x1 = layers.Dense(neurons, activation='elu', kernel_regularizer=keras.regularizers.l2(l2_penalty))(normed)
+        x1 = layers.Dense(neurons,
+                            activation='elu',
+                            # kernel_regularizer=keras.regularizers.l2(l2_penalty)
+                            )(normed)
         nrlayers = hp.Int("layers", self.hp_dict["layers_min"], self.hp_dict["layers_max"], self.hp_dict["layers_step"])
         for i in range(nrlayers - 1):
-            x1 = layers.Dense(neurons, activation='elu', kernel_regularizer=keras.regularizers.l2(l2_penalty))(x1)
+            x1 = layers.Dense(neurons,
+                            activation='elu',
+                            # kernel_regularizer=keras.regularizers.l2(l2_penalty)
+                            )(x1)
         outputs = layers.Dense(1)(x1)  # This should output energy
 
         # Compile the model
