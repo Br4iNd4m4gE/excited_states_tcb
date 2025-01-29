@@ -98,110 +98,6 @@ class hpModelBuilder_forces:
         return best_hps, tuner
 
 
-class hpModelBuilder_energy_oscStr_old_working:
-    """
-    Class for HP search for energy + oscillator strength NN.
-    """
-    def __init__(self, hp_dict, natoms, dense_activ, final_activ, output_spec, loss, r2_metric, norm, coords_scale_mean, coords_scale_std, feat_coords_mean, feat_coords_std):
-        self.hp_dict = hp_dict
-        self.natoms = natoms
-        self.dense_activ = dense_activ
-        self.final_activ = final_activ
-        self.output_spec = output_spec
-        self.loss = loss
-        self.r2_metric = r2_metric
-        self.norm = norm
-        self.coords_scale_mean = coords_scale_mean
-        self.coords_scale_std = coords_scale_std
-        self.feat_coords_mean = feat_coords_mean
-        self.feat_coords_std = feat_coords_std
-
-    def build_model(self, hp):
-        """ Building up the esp-model for hyperparametersearch. This is a modified 
-        version of esp_nn.py/build_model() with hyperparameters. Therefore, the
-        main architecture is fixed. You may vary number of neurons in MLP layer,
-        the depth, the l1 or l2 regularization and the learning rate for now."""
-
-        # 0. Create interatomic distance matrix
-        geom_idx = [(i,j) for i,j in combinations(range(self.natoms), 2)]
-        interatomic_dists = np.array(geom_idx) # this is [ [0,1],[0,2],...,[83,84] ]
-
-
-        # 1. Create NN inputs of coordinates
-        geom_shape = (self.natoms, 3)
-        geom_in = keras.Input(shape=geom_shape, dtype='float32', name='geo_input')
-
-        # Scaling layer - for coordinates
-        geom_in = ScalingLayer(self.coords_scale_mean, self.coords_scale_std)(geom_in)
-
-        # Feature layer - inverted distances
-        feat_layer = FeatureGeometric(invd_shape=interatomic_dists.shape, name="feat_layer")
-        feat_layer.set_mol_index(interatomic_dists, None, None) # which interatomic distances to use
-
-        # Flatten input and connect to feature layer
-        full = keras.layers.Flatten(name='feat_flat')(geom_in)
-        full = feat_layer(geom_in)
-        
-        # Normalization layer - normalization of features: norm over entire training set, using set_const_normalization_from_features
-        geom_prep = ConstLayerNormalization(name="feat_std")(full)
-
-
-        # 2. Esp_in
-        esp_in = keras.Input(shape=(self.natoms, ), dtype='float32', name='esp_input')
-
-        # 3. Concat
-        rep = keras.layers.Concatenate(name="concat_layer")([geom_prep, esp_in]) # representation of inputs
-
-        # 4. Build MLP
-        neurons = hp.Int("nn_size", self.hp_dict["neurons_min"], self.hp_dict["neurons_max"], self.hp_dict["neurons_step"])
-        hp_layer_depth = hp.Int("depth", self.hp_dict["layers_min"], self.hp_dict["layers_max"], self.hp_dict["layers_step"])
-        hp_regularizer = self.hp_dict["regulizer"]
-        mlp = MLP(dense_units=neurons,
-                    dense_depth=hp_layer_depth,
-                    dense_activ=self.dense_activ,
-                    dense_activ_last=self.dense_activ, # difference from OG model
-                    dense_kernel_regularizer=hp_regularizer, # difference from OG model
-                    name="monolith")
-        
-        # 5. Complete model
-        final_layer = keras.layers.Dense(2, 
-                        activation=self.final_activ, 
-                        use_bias=True, 
-                        name="out_vom_mlp")(mlp(rep))
-        
-        # 6. Model
-        inputs_list = [geom_in, esp_in] # actual inputs
-        model = keras.Model(inputs=inputs_list, outputs=final_layer) # maybe [final_layer]?
-        hp_learning_rate = hp.Choice("learning_rate", values=self.hp_dict["learning_rates"])
-        opti = keras.optimizers.Adam(learning_rate=hp_learning_rate)
-
-        # 7. Metrics
-        for _, o in self.output_spec.items():
-            # if targets are scaled, the MAE must be converted to original data units
-            maes = []
-            if o.scaler:
-                mae_scaled = ScaledMeanAbsoluteError(scaling_shape=o.scaler.scale_.shape)
-                mae_scaled.set_scale(o.scaler.scale_)
-                maes.append(mae_scaled)
-            else:
-                maes.append("mean_absolute_error")
-                
-        # 8. Compile model
-        model.compile(optimizer=opti, loss=self.loss, metrics=[[mae, self.r2_metric] for mae in maes]) # for history and tuning
-
-        # 9. Set normalization parameters
-        # # The layer calculating inverse distances ist the first layer of the model. The result of this layer is used to fit the normalization layer (x -> x-µ/std).
-        # # Basically a normalization layer is fitted to the inverse distances.
-        if self.feat_coords_mean is not None and self.feat_coords_std is not None:
-            model.get_layer('feat_std').set_weights([self.feat_coords_mean, self.feat_coords_std])
-        return model
-    
-    def perform_hp_search(self, x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_outpath):
-        tuner = kt.Hyperband(self.build_model, objective=kt.Objective("val_r2_metric", "max"), max_epochs=hp_maxepochs, factor=hp_factor, directory=hp_outpath)
-        tuner.search(x=x_train, y=y_train, verbose=2, epochs=hp_maxepochs, validation_split=0.1, callbacks=callbacks, batch_size=64)
-        best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-        return best_hps, tuner
-
 class hpModelBuilder_energy_oscStr:
     """
     Class for HP search for energy + oscillator strength NN.
@@ -260,13 +156,21 @@ class hpModelBuilder_energy_oscStr:
         # Build MLP for energy prediction
         neurons_energy = hp.Int("nn_size_energy", self.hp_dict["neurons_min"], self.hp_dict["neurons_max"], self.hp_dict["neurons_step"])
         depth_energy = hp.Int("depth_energy", self.hp_dict["layers_min"], self.hp_dict["layers_max"], self.hp_dict["layers_step"])
-        mlp_energy = MLP(dense_units=neurons_energy, dense_depth=depth_energy, dense_activ=self.dense_activ, name="mlp_energy")
+        mlp_energy = MLP(dense_units=neurons_energy,
+                         dense_depth=depth_energy,
+                         dense_activ=self.dense_activ,
+                         dense_activ_last=self.dense_activ, # difference from OG model
+                         name="mlp_energy")
         energy_output = keras.layers.Dense(1, activation=self.final_activ, name="energy_output")(mlp_energy(rep))
 
         # Build MLP for oscillator strength prediction
         neurons_osc = hp.Int("nn_size_osc", self.hp_dict["neurons_min"], self.hp_dict["neurons_max"], self.hp_dict["neurons_step"])
         depth_osc = hp.Int("depth_osc", self.hp_dict["layers_min"], self.hp_dict["layers_max"], self.hp_dict["layers_step"])
-        mlp_osc = MLP(dense_units=neurons_osc, dense_depth=depth_osc, dense_activ=self.dense_activ, name="mlp_osc")
+        mlp_osc = MLP(dense_units=neurons_osc,
+                      dense_depth=depth_osc,
+                      dense_activ=self.dense_activ,
+                      dense_activ_last=self.dense_activ, # difference from OG model
+                      name="mlp_osc")
         osc_output = keras.layers.Dense(1, activation=self.final_activ, name="osc_output")(mlp_osc(rep))
 
         # 5. Combine outputs
