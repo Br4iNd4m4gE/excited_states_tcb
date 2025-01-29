@@ -68,9 +68,6 @@ hp_out_name        = config.get("hp_out_name", "outputtuner")
 
 ############################ PARAMETERS ##################################
 
-# Normalization of geometries
-norm = "const" #  "const" normalizes geometries once over all data; "batch" in batchs
-
 # Other (BUGFIX)
 clean_up_hpoutpath = True # delete hp_out_path before tuning (catch some errors 'oracle exited training' etc.)
 
@@ -144,7 +141,7 @@ coordscaler = StandardScaler()
 coords_scale_mean, coords_scale_std = coordscaler.fit(data["coords"].reshape(-1, 3)).mean_, coordscaler.scale_
 
 # Initialize ModelBuilder - needs to be performed before the precompute features (because you nee a specific layer of the network for precomputing features of inv. dist. layer)
-model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm, coords_scale_mean, coords_scale_std, None, None)
+model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, dense_activ, final_activ, output_spec, loss_training, r2_metric, coords_scale_mean, coords_scale_std, None, None)
 
 # Precompute features (inverted distances) - for adding a scaling layer of the features
 dummy_hp = HyperParameters()

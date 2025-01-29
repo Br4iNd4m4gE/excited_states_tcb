@@ -108,7 +108,7 @@ class hpModelBuilder_energy_oscStr:
     """
     Class for HP search for energy + oscillator strength NN.
     """
-    def __init__(self, hp_dict, natoms, dense_activ, final_activ, output_spec, loss, r2_metric, norm, coords_scale_mean, coords_scale_std, feat_coords_mean, feat_coords_std):
+    def __init__(self, hp_dict, natoms, dense_activ, final_activ, output_spec, loss, r2_metric, coords_scale_mean, coords_scale_std, feat_coords_mean, feat_coords_std):
         self.hp_dict = hp_dict
         self.natoms = natoms
         self.dense_activ = dense_activ
@@ -116,7 +116,6 @@ class hpModelBuilder_energy_oscStr:
         self.output_spec = output_spec
         self.loss = loss
         self.r2_metric = r2_metric
-        self.norm = norm
         self.coords_scale_mean = coords_scale_mean
         self.coords_scale_std = coords_scale_std
         self.feat_coords_mean = feat_coords_mean
