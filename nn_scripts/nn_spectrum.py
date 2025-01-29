@@ -108,6 +108,11 @@ print(f"> Config file: {config_file}")
 
 ## 1. Data Preparation
 
+# Remove old outputtuner directory
+if clean_up_hpoutpath:
+    if isdir(hp_out_path): # comment of Manu: this is needed if tuner quits with "INFO:tensorflow:Oracle triggered exit" -> My comment: I think this is not needed
+        shutil.rmtree(hp_out_path)
+
 # Load and preprocess data
 xyz_esp_data, energies, natoms, ntotal = load_data_excited_states_energies(inputfile, lines_to_skip) # energies and osc. str. -> coords in Bohr, esp_grads in atomic units
 print(f"Number of Data points in the input file {inputfile} is {len(xyz_esp_data)}")
@@ -119,14 +124,6 @@ coords_train, esp_grads_train, targets_train, coords_test, esp_grads_test, targe
 # Extract ESP data
 esp_train = esp_grads_train[:, :, 0] # esp_grads_train can include esp + esp_grads; esp_grads_train[:, :, 0] extracts only esp
 esp_test  = esp_grads_test[:, :, 0]
-
-# Check whether ESP data is included in the training data
-# if esp_train.shape[1] == 0:
-#     esp_in_traindata = False
-#     print(">>>>> ESP data not included in training data.")
-# else:
-#     esp_in_traindata = True
-#     print(">>>>> ESP data included in training data.") <------------- Check whether any ESP is != 0 in data
 
 # Store train and test data
 data = {"coords": coords_train, "esp": esp_train, "targets": targets_train}
@@ -166,14 +163,6 @@ y_train   = data["targets_scaled"]
 
 
 ## 2. Hyperparameter Search
-
-# Remove old outputtuner directory
-if clean_up_hpoutpath:
-    if isdir(hp_out_path): # comment of Manu: this is needed if tuner quits with "INFO:tensorflow:Oracle triggered exit" -> My comment: I think this is not needed
-        shutil.rmtree(hp_out_path)
-
-# # Initialize ModelBuilder
-# model_builder = hpModelBuilder_energy_oscStr(hp_dict, natoms, dense_activ, final_activ, output_spec, loss_training, r2_metric, norm, coords_scale_mean, coords_scale_std, feat_coords_mean, feat_coords_std)
 
 # Perform hyperparameter search
 best_hps, tuner = model_builder.perform_hp_search(x_train, y_train, hp_maxepochs, hp_factor, callbacks, hp_out_path)
