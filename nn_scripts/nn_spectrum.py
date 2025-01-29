@@ -58,7 +58,7 @@ hp_dict = {
     "layers_min":     int(config.get("hp_layers_min", 2)),
     "layers_max":     int(config.get("hp_layers_max", 8)),
     "layers_step":    int(config.get("hp_layers_step", 1)),
-    "regulizer":      config.get("hp_regulizer", "l2"),
+    # "regulizer":      config.get("hp_regulizer", "l2"),
     "learning_rates": config.get("hp_learning_rates", [1e-3, 5e-4, 1e-4, 5e-5]),
 }
 
@@ -210,9 +210,12 @@ energies_ref_eV = targets_test[:, 0] * EhtoeV
 osc_pred = model_pred[:, 1]
 osc_ref  = targets_test[:, 1]
 
+# Digit precision of performance metrics
+n_digits = 4
+
 # Calculate MAE
-MAE_energy  = mean_absolute_error(energies_ref_eV, model_pred_eV)
-MAE_osc = mean_absolute_error(osc_ref, osc_pred)
+MAE_energy  = round(mean_absolute_error(energies_ref_eV, model_pred_eV), n_digits)
+MAE_osc = round(mean_absolute_error(osc_ref, osc_pred), n_digits)
 
 # Evaluate (scaled) model -> the model without the wrapper (true performance of model)
 ref_scaled = targetscaler.transform(targets_test.reshape(-1,2))
@@ -220,11 +223,11 @@ hp_metrics = hp_model.evaluate(x_test, ref_scaled)
 model_pred_scaled = hp_model.predict(x_test) # the direct output of the model (before the wrapper)
 
 # Extract performance metrics
-R2_total  = hp_metrics[2]
-R2_energy = r2_score(ref_scaled[:, 0], model_pred_scaled[:, 0])
-R2_osc    = r2_score(ref_scaled[:, 1], model_pred_scaled[:, 1])
+R2_total  = round(hp_metrics[2], n_digits)
+R2_energy = round(r2_score(ref_scaled[:, 0], model_pred_scaled[:, 0]), n_digits)
+R2_osc    = round(r2_score(ref_scaled[:, 1], model_pred_scaled[:, 1]), n_digits)
 
-MAE_total = hp_metrics[1]
+MAE_total = round(hp_metrics[1], n_digits)
 
 # Get best hyperparameters
 best_hps_config_str = "\t" + "\n\t".join([f"{key}: {value}" for key, value in best_hps.get_config()["values"].items()])
