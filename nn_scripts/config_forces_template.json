@@ -9,9 +9,8 @@
     "hp_neurons_max": 1000,
     "hp_neurons_step": 50,
     "hp_layers_min": 2,
-    "hp_layers_max": 4,
+    "hp_layers_max": 6,
     "hp_layers_step": 1,
     "hp_initial_lr": [1e-3, 5e-4, 1e-4],
-    "hp_l2_penalty": [1e-3, 5e-4, 1e-4,5e-5],
     "hp_loss_ratio": [1e-2, 5e-3, 1e-3, 5e-4]
   }

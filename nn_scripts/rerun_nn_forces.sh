@@ -28,10 +28,11 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-g", "--gpuid", type=int)
 ap.add_argument("-f", "--file", required=True, help="Path to the input file")
 ap.add_argument("-m", "--model", required=True, help="Path to the saved model")
-ap.add_argument("-se", "--save_e", required=True, help="Save energy and oscillator strength in separate files", default="save_energy.txt")
-ap.add_argument("-sf", "--save_f", required=True, help="Save forces and oscillator strength in separate files", default="save_forces.txt")
+ap.add_argument("-se", "--save_e", required=False, help="Save energy and oscillator strength in separate files", default="save_energy.txt")
+ap.add_argument("-sf", "--save_f", required=False, help="Save forces and oscillator strength in separate files", default="save_forces.txt")
 # ap.add_argument("-o", "--output", required=True, help="Output file for the predictions")
 ap.add_argument("-l", "--loss_ratio", required=False, type=float, help="Loss ratio for the optimizer", default=0.001)
+ap.add_argument("-nt", "--no_targets", required=False, help="If the input file is a training data file (first line is energy)", action="store_true")
 args = ap.parse_args()
 
 # Set GPU
@@ -48,43 +49,61 @@ loss_ratio = args.loss_ratio
 with tf.keras.utils.custom_object_scope({'my_loss_fn': custom_loss_forces(args.loss_ratio)}):  # Adjust the loss_ratio as needed
     mlmm_model = tf.keras.models.load_model(model_path, compile=False)
 
+# Targets bool
+targets_exist = not args.no_targets
+if targets_exist:
+    print(">> Using targets")
+else:
+    print(">> Not using targets")
+
 # Load data
 inputfile = args.file
-lines_to_skip = 1 # comment lines
-x, y, _, _ = load_data_excited_states_forces(inputfile, lines_to_skip)
+if targets_exist:
+    lines_to_skip = 1 # comment lines
+else:
+    lines_to_skip = 0
+print("Lines to skip:", lines_to_skip, targets_exist)
+x, y, _, _ = load_data_excited_states_forces(inputfile, lines_to_skip, targets_exist)
+
+print(x)
 
 print("Shape of x:", np.array(x).shape)
-print("Shape of y:", np.array(y).shape)
+if targets_exist:
+    print("Shape of y:", np.array(y).shape)
 
 # Convert to tensors
 x = tf.convert_to_tensor(x)
-y = tf.convert_to_tensor(y)
+if targets_exist:
+    y = tf.convert_to_tensor(y)
 
 # Evaluate the model
 prediction = mlmm_model(x)
 
 # DEBUGGING
-print("Shape of y:", np.array(y).shape)
+if targets_exist:
+    print("Shape of y:", np.array(y).shape)
 print("Shape of prediction ", prediction.shape)
 
 # Ensure the predictions have the same shape as the original data
-if prediction.shape[1] != y.shape[1]:
-    raise ValueError(f"Shape mismatch: predictions have shape {prediction.shape} but expected shape {y.shape}")
+if targets_exist:
+    if prediction.shape[1] != y.shape[1]:
+        raise ValueError(f"Shape mismatch: predictions have shape {prediction.shape} but expected shape {y.shape}")
 
 # Calculate performance metrics
 forces_pred = K.flatten(prediction[:, 1:])
-forces_true = K.flatten(y[:, 1:])
-r2_energy = r2_score(y[:, 0], prediction[:, 0])
-mae_energy = mean_absolute_error(y[:, 0], prediction[:, 0])
-r2_forces = r2_score(forces_true, forces_pred)
-mae_forces = mean_absolute_error(forces_true, forces_pred)
+if targets_exist:
+    forces_true = K.flatten(y[:, 1:])
+    r2_energy = r2_score(y[:, 0], prediction[:, 0])
+    mae_energy = mean_absolute_error(y[:, 0], prediction[:, 0])
+    r2_forces = r2_score(forces_true, forces_pred)
+    mae_forces = mean_absolute_error(forces_true, forces_pred)
 
-# Print performance metrics
-print("Performance on new data:")
-print("R2 Total Energy:", r2_energy)
-print("MAE Total Energy:", mae_energy, "eV")
-print("R2 Forces:", r2_forces)
-print("MAE Forces:", mae_forces, "eV/A")
+    # Print performance metrics
+    print("Performance on new data:")
+    print("R2 Total Energy:", r2_energy)
+    print("MAE Total Energy:", mae_energy, "eV")
+    print("R2 Forces:", r2_forces)
+    print("MAE Forces:", mae_forces, "eV/A")
 
 # Save the predictions
 if args.save_f:
@@ -105,30 +124,31 @@ if args.save_e:
 
     print(f"Energy predictions saved to {output_file}")
 
-## Plot predictions vs true values
-# Energy
-plt.figure()
-plt.hist2d(y[:, 0], prediction[:, 0], bins=100, cmin=1, cmap='inferno', label="Total Energy")
-plt.colorbar()
-plt.xlabel("True Total Energy [eV]")
-plt.ylabel("Predicted Total Energy [eV]")
-plt.title("Total Energy Predictions")
-plt.savefig("total_energy_predictions.png")
+if targets_exist:
+    ## Plot predictions vs true values
+    # Energy
+    plt.figure()
+    plt.hist2d(y[:, 0], prediction[:, 0], bins=100, cmin=1, cmap='inferno', label="Total Energy")
+    plt.colorbar()
+    plt.xlabel("True Total Energy [eV]")
+    plt.ylabel("Predicted Total Energy [eV]")
+    plt.title("Total Energy Predictions")
+    plt.savefig("total_energy_predictions.png")
 
-# Forces cmin=1
-plt.figure()
-plt.hist2d(forces_true, forces_pred, bins=100, cmin=1, cmap='inferno', label="Forces")
-plt
-plt.xlabel("True Forces [eV/A]")
-plt.ylabel("Predicted Forces [eV/A]")
-plt.title("Forces Predictions")
-plt.savefig("forces_predictions_cmin1.png")
+    # Forces cmin=1
+    plt.figure()
+    plt.hist2d(forces_true, forces_pred, bins=100, cmin=1, cmap='inferno', label="Forces")
+    plt
+    plt.xlabel("True Forces [eV/A]")
+    plt.ylabel("Predicted Forces [eV/A]")
+    plt.title("Forces Predictions")
+    plt.savefig("forces_predictions_cmin1.png")
 
-# Forces cmin=50
-plt.figure()
-plt.hist2d(forces_true, forces_pred, bins=100, cmin=50, cmap='inferno', label="Forces")
-plt
-plt.xlabel("True Forces [eV/A]")
-plt.ylabel("Predicted Forces [eV/A]")
-plt.title("Forces Predictions")
-plt.savefig("forces_predictions_cmin50.png")
+    # Forces cmin=50
+    plt.figure()
+    plt.hist2d(forces_true, forces_pred, bins=100, cmin=50, cmap='inferno', label="Forces")
+    plt
+    plt.xlabel("True Forces [eV/A]")
+    plt.ylabel("Predicted Forces [eV/A]")
+    plt.title("Forces Predictions")
+    plt.savefig("forces_predictions_cmin50.png")

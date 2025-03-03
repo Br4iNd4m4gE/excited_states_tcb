@@ -49,14 +49,21 @@ final_activ       = config.get("final_activation_function", "linear") # activati
 loss_training     = config.get("training_loss_function", "mean_squared_error") # for trainig 
 
 # Hyperparameter search inputs
-hp_maxepochs = int(config.get("hp_epochs", 20)) # for tuner object 
+hp_maxepochs = int(config.get("hp_epochs", 50)) # for tuner object 
 hp_factor    = int(config.get("hp_factor", 2)) # for tuner object
 hp_dict = {
-    "neurons_min":    int(config.get("hp_neurons_min", 20)),
-    "neurons_max":    int(config.get("hp_neurons_max", 100)),
-    "neurons_step":   int(config.get("hp_neurons_step", 5)),
-    "layers_min":     int(config.get("hp_layers_min", 2)),
-    "layers_max":     int(config.get("hp_layers_max", 8)),
+    "neurons_step":          int(config.get("hp_neurons_step", 10)),
+
+    "neurons_energy_min":    int(config.get("hp_neurons_energy_min", 20)),
+    "neurons_energy_max":    int(config.get("hp_neurons_energy_max", 100)),
+    "layers_energy_min":     int(config.get("hp_layers_energy_min", 2)),
+    "layers_energy_max":     int(config.get("hp_layers_energy_max", 8)),
+
+    "neurons_osc_min":       int(config.get("hp_neurons_osc_min", 20)),
+    "neurons_osc_max":       int(config.get("hp_neurons_osc_max", 100)),
+    "layers_osc_min":        int(config.get("hp_layers_osc_min", 2)),
+    "layers_osc_max":        int(config.get("hp_layers_osc_max", 8)),
+
     "layers_step":    int(config.get("hp_layers_step", 1)),
     # "regulizer":      config.get("hp_regulizer", "l2"),
     "learning_rates": config.get("hp_learning_rates", [1e-3, 5e-4, 1e-4, 5e-5]),

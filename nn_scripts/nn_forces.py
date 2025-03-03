@@ -56,9 +56,11 @@ hp_dict   = {
 	"layers_max":	int(config.get("hp_layers_max", 4)),
 	"layers_step":	int(config.get("hp_layers_step", 1)),
 	"initial_lr":	config.get("hp_initial_lr", [1e-3, 5e-4, 1e-4]),
-	"l2_penalty":	config.get("hp_l2_penalty", [1e-3, 5e-4, 1e-4, 5e-5]),
+	# "l2_penalty":	config.get("hp_l2_penalty", [1e-3, 5e-4, 1e-4, 5e-5]),
 	"loss_ratio":   config.get("hp_loss_ratio", [1e-2, 5e-3, 1e-3, 5e-4])
 }
+inv_layer_cutoff = bool(config.get("inv_layer_cutoff", False))
+inv_layer_cutoff_value = float(config.get("inv_layer_cutoff_value", 2))
 
 ############################ PARAMETERS ##################################
 
@@ -107,7 +109,7 @@ if isdir("trials"):
 	shutil.rmtree("trials")
 
 # Initialize ModelBuilder
-model_builder = hpModelBuilder_forces(hp_dict, n_atoms, x_train)
+model_builder = hpModelBuilder_forces(hp_dict, n_atoms, x_train, inv_layer_cutoff, inv_layer_cutoff_value)
 
 # Perform hyperparameter search
 best_hps, tuner = model_builder.perform_hp_search(x_train, y_train_scaled, hp_epochs, hp_factor, batch_size, stop_early)
@@ -173,7 +175,7 @@ val_losses = hist.history["val_loss"]
 
 # Print results in train.out
 print("\n\n", 70 * "-", "\n\t\t\t\t\t\t\t\tSummary\n", 70 * "-")
-print(f'\n> Network Architecture:\n{best_hps.get("neurons")} neurons, {best_hps.get("layers")} layers, {best_hps.get("loss_ratio")} loss ratio, {best_hps.get("initial_lr")} initial learning rate and {best_hps.get("l2_penalty")} regulization penalty give the best results\n\n')
+print(f'\n> Network Architecture:\n{best_hps.get("neurons")} neurons, {best_hps.get("layers")} layers, {best_hps.get("loss_ratio")} loss ratio, {best_hps.get("initial_lr")} initial learning rate give the best results\n\n')
 
 print(f"> R2 Total Energy:\n\t{r2_te}")
 print(f"> MAE Total Energy:\n\t{mae_te} Eh\n\t{mae_te_eV} eV")

@@ -177,7 +177,7 @@ def extract_number_of_atoms(file_path, lines_to_skip=0):
             break
         num_atoms += 1
     
-    num_atoms -= lines_to_skip # Subtract one because the first line is the energy
+    num_atoms -= lines_to_skip # Subtract one because the first line is the energy (if energy was given)
     return num_atoms
 
 def gaussian(x, amplitude, mean, stddev):
@@ -190,9 +190,12 @@ unit_conversions = {
     'HaB_to_eVA': 27.2114 / 0.52918,
 }
 
-def load_data_excited_states_forces(inputfile, lines_to_skip):
+def load_data_excited_states_forces(inputfile, lines_to_skip: int, training_bool: bool = True):
     """
+    gets coords in Angstrom, forces in , energy in Hartree
     returns coords in Bohr, forces in Hartree/Bohr, energy in Hartree
+
+    note: if the training_bool is set to False, the function skips the read_in of the energy line
     """
 
     A2Bohr = unit_conversions['A2Bohr']
@@ -209,20 +212,24 @@ def load_data_excited_states_forces(inputfile, lines_to_skip):
         x = []
         y = []
         for i in range(data_size):
-            energy = data.readline()
             tmpy = []
-            tmpy.append(np.sum([float(energy) for energy in energy.split()]))
+            if training_bool: # if the first line exists (containing energy)
+                energy = data.readline()
+                tmpy.append(np.sum([float(energy) for energy in energy.split()]))
             comp_tmp = []
-            for j in range(n_atoms):
+            for _ in range(n_atoms):
                 line = data.readline()
                 line_split = [float(n) for n in line.split()[1:]]
                 coords = [A2Bohr * n for n in line_split[:3]]
-                coords.append(line_split[3])
+                coords.append(line_split[3]) # esp
                 comp_tmp.append(coords)
-                tmpy.extend(line_split[4:])
+                tmpy.extend(line_split[4:]) # forces
             x.append(comp_tmp)
-            y.append(tmpy)
-            data.readline()
+            if training_bool:
+                y.append(tmpy)
+            else:
+                y.append(np.zeros(4))
+            data.readline() # empty line
     
     return x, y, n_atoms, ntotal
 
@@ -233,7 +240,7 @@ def load_data_excited_states_energies(inputfile, lines_to_skip):
     # Get number of atoms
     natoms = extract_number_of_atoms(inputfile, lines_to_skip)
     linestotal = get_file_length(inputfile)
-    ntotal = linestotal / (natoms + lines_to_skip + 1)
+    ntotal = linestotal / (natoms + lines_to_skip + 1) # +1 for empty line at the end of each geometry
     if not ntotal.is_integer():
         raise ValueError("Number of Lines incorrect.")
 

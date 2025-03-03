@@ -366,17 +366,19 @@ class InverseDistance_with_ESP(ks.layers.Layer):
     """
     Layer to compute inverse distances with a mask to filter large distances.
     """
-    def __init__(self, inputs: np.ndarray):
+    def __init__(self, inputs: np.ndarray, mask_bool: bool = False, mask_cutoff: float = 0.1):
         super(InverseDistance_with_ESP, self).__init__()
         """
         Mask filters large distances and reduces the dimension of the input
         """
+        self.mask_bool = mask_bool
+        self.mask_cutoff = mask_cutoff
         self.mask = self.create_mask(inputs)
         self.mask = tf.math.reduce_all(self.mask, axis=0) #if the distance is below a cutoff for all samples that distance is always considered
     
     def create_mask(self, inputs: np.ndarray) -> tf.Tensor:
         inv_dist = self.inv_distances(inputs)
-        mask = K.greater(inv_dist, 0.1) # 0.1 is arbitrary
+        mask = K.greater(inv_dist, self.mask_cutoff) # cutoff at 0.1 is arbitrary
         return mask
 
     def build(self, input_shape):
@@ -424,7 +426,10 @@ class InverseDistance_with_ESP(ks.layers.Layer):
 
     def call(self, inputs: np.ndarray) -> tf.Tensor:
         inv_distances = self.inv_distances(inputs)
-        filtered_distances = tf.transpose(tf.boolean_mask(tf.transpose(inv_distances), self.mask))
+        if self.mask_bool:
+            filtered_distances = tf.transpose(tf.boolean_mask(tf.transpose(inv_distances), self.mask))
+        else:
+            filtered_distances = inv_distances
 
         esp = inputs[:, :, 3]
         output = K.concatenate((filtered_distances, esp), axis=-1)

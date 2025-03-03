@@ -20,7 +20,7 @@ class hpModelBuilder_forces:
     """
     Class for HP search for force NN.
     """
-    def __init__(self, hp_dict: dict, n_atoms: int, x_train: np.ndarray):
+    def __init__(self, hp_dict: dict, n_atoms: int, x_train: np.ndarray, inv_layer_cutoff: bool, inv_layer_cutoff_value: float):
         """
         Initialize the hyperparameters and preprocess the training data.
 
@@ -31,12 +31,14 @@ class hpModelBuilder_forces:
         """
         self.hp_dict = hp_dict
         self.n_atoms = n_atoms
+        self.inv_layer_cutoff = inv_layer_cutoff
+        self.inv_layer_cutoff_value = inv_layer_cutoff_value
 
         # The init method is used to precompute the normalization parameters for the inverse distance layer
         # And the normalization layer. The inverse distance layer is the first layer of the model.
 
         # Initialize inverse distance and filtering layer
-        self.preprocessor = InverseDistance_with_ESP(x_train) # initialize inverse distance layer (set mask)
+        self.preprocessor = InverseDistance_with_ESP(x_train, self.inv_layer_cutoff, self.inv_layer_cutoff_value) # initialize inverse distance layer (set mask)
         xtrain_dist = self.preprocessor(x_train)
         dist_shape = np.shape(xtrain_dist)
         
@@ -159,8 +161,8 @@ class hpModelBuilder_energy_oscStr:
 
         # 4. Build MLP
         # Build MLP for energy prediction
-        neurons_energy = hp.Int("nn_size_energy", self.hp_dict["neurons_min"], self.hp_dict["neurons_max"], self.hp_dict["neurons_step"])
-        depth_energy = hp.Int("depth_energy", self.hp_dict["layers_min"], self.hp_dict["layers_max"], self.hp_dict["layers_step"])
+        neurons_energy = hp.Int("nn_energy_size", self.hp_dict["neurons_energy_min"], self.hp_dict["neurons_energy_max"], self.hp_dict["neurons_step"])
+        depth_energy = hp.Int("depth_energy", self.hp_dict["layers_energy_min"], self.hp_dict["layers_energy_max"], self.hp_dict["layers_step"])
         mlp_energy = MLP(dense_units=neurons_energy,
                          dense_depth=depth_energy,
                          dense_activ=self.dense_activ,
@@ -169,8 +171,8 @@ class hpModelBuilder_energy_oscStr:
         energy_output = keras.layers.Dense(1, activation=self.final_activ, name="energy_output")(mlp_energy(rep))
 
         # Build MLP for oscillator strength prediction
-        neurons_osc = hp.Int("nn_size_osc", self.hp_dict["neurons_min"], self.hp_dict["neurons_max"], self.hp_dict["neurons_step"])
-        depth_osc = hp.Int("depth_osc", self.hp_dict["layers_min"], self.hp_dict["layers_max"], self.hp_dict["layers_step"])
+        neurons_osc = hp.Int("nn_osc_size", self.hp_dict["neurons_osc_min"], self.hp_dict["neurons_osc_max"], self.hp_dict["neurons_step"])
+        depth_osc = hp.Int("depth_osc", self.hp_dict["layers_osc_min"], self.hp_dict["layers_osc_max"], self.hp_dict["layers_step"])
         mlp_osc = MLP(dense_units=neurons_osc,
                       dense_depth=depth_osc,
                       dense_activ=self.dense_activ,
