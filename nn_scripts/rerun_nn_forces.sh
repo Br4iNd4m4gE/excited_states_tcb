@@ -19,7 +19,7 @@ from sklearn.metrics import r2_score, mean_absolute_error
 from os.path import join, isdir, isfile, dirname, abspath
 
 sys.path.append(abspath(join(dirname(__file__), "..")))
-from exsNN.utils.general import parse_single_file, extract_number_of_atoms, get_file_length, gaussian, unit_conversions, load_data_excited_states_forces
+from exsNN.utils.general import unit_conversions, load_data_excited_states_forces
 from exsNN.nn_pes_src.device import set_gpu
 from exsNN.utils.loss import custom_loss_forces
 
