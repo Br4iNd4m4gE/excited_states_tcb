@@ -12,14 +12,17 @@ class WrapForcesModel(ks.Model):
 	def __init__(self, model, mean, var):
 		super().__init__()
 		self.submodel = model
-		self.mean = mean
-		self.std = tf.sqrt(var)
+		# self.mean = mean
+		# self.std = tf.sqrt(var)
+		self.mean = tf.convert_to_tensor(mean, dtype=tf.float32)
+		self.std = tf.sqrt(tf.convert_to_tensor(var, dtype=tf.float32))
 	def call(self, inputs):
-		tf.print("New call\nScaling: ", self.mean, self.std)
-		tf.print("Inputs:\n", inputs, summarize=-1)
+		tf.print("New call Wrapper\nScaling: ", self.mean, self.std, self.mean.dtype, self.std.dtype)
+		tf.print("Inputs Wrapper:\n", inputs, inputs.dtype, summarize=-1)
 		outputs = self.submodel(inputs)
+		tf.print("Outputs Wraopper")
 		outputs_rescaled = self.std * outputs + self.mean
-		tf.print("Outputs:\n", outputs_rescaled, summarize=-1)
+		tf.print("Outputs Rescaled Wrapper:\n", outputs_rescaled, summarize=-1)
 		return outputs_rescaled
 
 	def get_config(self):

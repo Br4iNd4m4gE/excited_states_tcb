@@ -194,15 +194,22 @@ class EnergyGradientLayer(ks.Model):
         self.n_atoms = n_atoms
 
     def call(self, inputs, **kwargs):
+        tf.print("EnergyGradientLayer:")
+        tf.print("EG inputs")
         with tf.GradientTape() as tape:
             tape.watch(inputs)
             outputs = super().call(inputs)
+            tf.print("EG outputs")
             output = outputs[:, :1]
             grads = tape.gradient(output,inputs)
+            tf.print("EG grads")
             pred_forces = -grads[:, :, :3]
             pred_forces = tf.reshape(pred_forces, [-1, self.n_atoms * 3])
+            tf.print("EG pred_forces")
             allpred = tf.concat([output, pred_forces], 1)
             # tf.print("custom", allpred.shape)
+            tf.print("EG allpred")
+            tf.print(f"allpred: {allpred}")
         return allpred
     
     def train_step(self, data):

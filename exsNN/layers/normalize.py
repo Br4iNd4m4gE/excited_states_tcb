@@ -100,9 +100,10 @@ class ConstLayerNormalization(ks.layers.Layer):
         return feat_x_mean,feat_x_std
 
 class NormalizationLayer(tf.keras.layers.Layer):
-	def __init__(self, mean, var):
-		super(NormalizationLayer, self).__init__()
-		self.mean = mean
-		self.var = var
-	def call(self, inputs):
-		return (inputs-self.mean)/np.sqrt(self.var)
+    def __init__(self, mean, var):
+        super(NormalizationLayer, self).__init__()
+        self.mean = mean
+        self.var = var
+    def call(self, inputs):
+        tf.print("Normalization")
+        return (inputs - self.mean) / np.sqrt(self.var)
