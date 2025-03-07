@@ -29,6 +29,15 @@ class WrapForcesModel(ks.Model):
 		# Check for NaNs or Infs in outputs
 		tf.debugging.check_numerics(outputs, "NaNs or Infs found in outputs")
 
+		# Add debug code here
+		tf.print("Min value:", tf.reduce_min(outputs_rescaled))
+		tf.print("Max value:", tf.reduce_max(outputs_rescaled))
+		tf.print("Contains NaN:", tf.reduce_any(tf.math.is_nan(outputs_rescaled)))
+		tf.print("Contains Inf:", tf.reduce_any(tf.math.is_inf(outputs_rescaled)))
+
+		# Try printing a small sample instead of the whole tensor
+		tf.print("First few values:", outputs_rescaled[0, 0, :5])
+
 		outputs_rescaled = self.std * outputs + self.mean
 		tf.print("Rescaled Outputs Successfully Calculated")
 		tf.print(outputs_rescaled.dtype, type(outputs_rescaled))
