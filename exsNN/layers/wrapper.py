@@ -18,10 +18,20 @@ class WrapForcesModel(ks.Model):
 		self.std = tf.sqrt(tf.convert_to_tensor(var, dtype=tf.float32))
 	def call(self, inputs):
 		tf.print("New call Wrapper\nScaling: ", self.mean, self.std, self.mean.dtype, self.std.dtype)
-		tf.print("Inputs Wrapper:\n", inputs, inputs.dtype, summarize=-1)
+		tf.print("Inputs Wrapper:\n", inputs, inputs.dtype, type(inputs), summarize=-1)
 		outputs = self.submodel(inputs)
-		tf.print("Outputs Wraopper")
+		tf.print("Outputs Wrapper ", outputs.dtype, type(outputs))
+		tf.print("dtypes: ", self.mean.dtype, self.std.dtype, outputs.dtype)
+        # Convert outputs to float64
+		outputs = tf.convert_to_tensor(outputs, tf.float32)
+		tf.print("After Conversion")
+    
+		# Check for NaNs or Infs in outputs
+		tf.debugging.check_numerics(outputs, "NaNs or Infs found in outputs")
+
 		outputs_rescaled = self.std * outputs + self.mean
+		tf.print("Rescaled Outputs Successfully Calculated")
+		tf.print(outputs_rescaled.dtype, type(outputs_rescaled))
 		tf.print("Outputs Rescaled Wrapper:\n", outputs_rescaled, summarize=-1)
 		return outputs_rescaled
 

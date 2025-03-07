@@ -41,7 +41,7 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 ###############################################################
 
 # Load unit conversions
-A2Bohr, EhtoeV, ehtonm = unit_conversions["A2Bohr"], unit_conversions["EhtoeV"], unit_conversions["ehtonm"]
+A2Bohr = unit_conversions["A2Bohr"]
 
 # Load model
 model_path = args.model
@@ -62,10 +62,10 @@ if targets_exist:
     lines_to_skip = 1 # comment lines
 else:
     lines_to_skip = 0
-print("Lines to skip:", lines_to_skip, targets_exist)
+print("Lines to skip:", lines_to_skip)
 x, y, _, _ = load_data_excited_states_forces(inputfile, lines_to_skip, targets_exist)
 
-print(x)
+# print(x)
 
 print("Shape of x:", np.array(x).shape)
 if targets_exist:

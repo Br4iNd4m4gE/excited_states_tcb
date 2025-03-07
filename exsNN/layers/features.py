@@ -425,9 +425,7 @@ class InverseDistance_with_ESP(ks.layers.Layer):
         return inverse_distances
 
     def call(self, inputs: np.ndarray) -> tf.Tensor:
-        tf.print("Starting inv_distances")
         inv_distances = self.inv_distances(inputs)
-        tf.print("inv_distances")
         if self.mask_bool:
             filtered_distances = tf.transpose(tf.boolean_mask(tf.transpose(inv_distances), self.mask))
         else:
@@ -435,5 +433,4 @@ class InverseDistance_with_ESP(ks.layers.Layer):
 
         esp = inputs[:, :, 3]
         output = K.concatenate((filtered_distances, esp), axis=-1)
-        tf.print("ind_dist output")
         return output
