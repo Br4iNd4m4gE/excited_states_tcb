@@ -17,11 +17,16 @@ class WrapForcesModel(ks.Model):
 		self.mean = tf.convert_to_tensor(mean, dtype=tf.float32)
 		self.std = tf.sqrt(tf.convert_to_tensor(var, dtype=tf.float32))
 	def call(self, inputs):
+		tf.print("Shape Inputs Wrapper:", inputs.shape)
 		tf.print("New call Wrapper\nScaling: ", self.mean, self.std, self.mean.dtype, self.std.dtype)
-		tf.print("Inputs Wrapper:\n", inputs, inputs.dtype, type(inputs), summarize=-1)
+		tf.print("Inputs Wrapper:\n", inputs, summarize=-1) ###########
+		tf.print("Inputs Wraper types :", inputs.dtype, type(inputs))
 		outputs = self.submodel(inputs)
 		tf.print("Outputs Wrapper ", outputs.dtype, type(outputs))
 		tf.print("dtypes: ", self.mean.dtype, self.std.dtype, outputs.dtype)
+
+		# tf.print(outputs, summarize=-1) ############
+
         # Convert outputs to float64
 		outputs = tf.convert_to_tensor(outputs, tf.float32)
 		tf.print("After Conversion")
@@ -29,19 +34,46 @@ class WrapForcesModel(ks.Model):
 		# Check for NaNs or Infs in outputs
 		tf.debugging.check_numerics(outputs, "NaNs or Infs found in outputs")
 
+		outputs_rescaled = self.std * outputs + self.mean
+		tf.print("Outputs rescaled")
+		tf.print("Shape of outputs_rescaled:", outputs_rescaled.shape)
+
+		# Try printing a small sample instead of the whole tensor
+		tf.print("First few values:", outputs_rescaled[0, :5])
+        
+		# tf.print("List of entries:")
+		# length = tf.shape(outputs_rescaled)[0]
+		# for i in range(length):
+		# 	line = outputs_rescaled[i]
+		# 	string = " ".join([str(entry) for entry in line])
+		# 	is_nan_or_inf = tf.reduce_any(tf.math.is_nan(line)) or tf.reduce_any(tf.math.is_inf(line))
+		# 	string += " " + str(is_nan_or_inf)
+		# 	tf.print(string)
+
 		# Add debug code here
 		tf.print("Min value:", tf.reduce_min(outputs_rescaled))
 		tf.print("Max value:", tf.reduce_max(outputs_rescaled))
 		tf.print("Contains NaN:", tf.reduce_any(tf.math.is_nan(outputs_rescaled)))
 		tf.print("Contains Inf:", tf.reduce_any(tf.math.is_inf(outputs_rescaled)))
-
-		# Try printing a small sample instead of the whole tensor
-		tf.print("First few values:", outputs_rescaled[0, 0, :5])
-
-		outputs_rescaled = self.std * outputs + self.mean
 		tf.print("Rescaled Outputs Successfully Calculated")
 		tf.print(outputs_rescaled.dtype, type(outputs_rescaled))
-		tf.print("Outputs Rescaled Wrapper:\n", outputs_rescaled, summarize=-1)
+
+		# Masks
+		# bool_NaN = tf.reduce_any(tf.math.is_nan(outputs_rescaled))
+		# tf.print("bool_NaN", bool_NaN, type(bool_NaN), bool_NaN.dtype)
+		# bool_Inf = tf.reduce_any(tf.math.is_inf(outputs_rescaled))
+		NaN_mask = tf.reduce_any(tf.math.is_nan(outputs_rescaled), axis=1)
+		tf.print("NaNs:\n")
+		tf.print(tf.boolean_mask(outputs_rescaled, NaN_mask))
+		Inf_mask = tf.reduce_any(tf.math.is_inf(outputs_rescaled), axis=1)
+		tf.print("Infs:\n")
+		tf.print(tf.boolean_mask(outputs_rescaled, Inf_mask))
+
+		try:
+			# tf.print("Outputs Rescaled Wrapper:\n", outputs_rescaled, summarize=-1) #######
+			tf.print("Successfully printed outputs")
+		except:
+			tf.print("Outputs Rescaled Wrapper: Could not print")
 		return outputs_rescaled
 
 	def get_config(self):
