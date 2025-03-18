@@ -215,7 +215,8 @@ def load_data_excited_states_forces(inputfile, lines_to_skip: int, training_bool
             tmpy = []
             if training_bool: # if the first line exists (containing energy)
                 energy = data.readline()
-                tmpy.append(sum([float(energy) for energy in energy.split()])) # Fehlersuche
+                energy_total = np.sum([np.float32(energy) for energy in energy.split()]) # it was only "sum"
+                tmpy.append(energy_total) # Fehlersuche
             comp_tmp = []
             for _ in range(n_atoms):
                 line = data.readline()
