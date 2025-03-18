@@ -117,10 +117,12 @@ def custom_loss_forces(loss_ratio):
     """
     def my_loss_fn(y_true, y_pred):
         squared_difference_energies = tf.square(y_true[:,0] - y_pred[:,0])
-        square_difference_forces = tf.square(y_true[:,1:] - y_pred[:,1:])
+        # square_difference_forces = tf.square(y_true[:,1:] - y_pred[:,1:])
+        abs_difference_forces = tf.math.abs(y_true[:,1:] - y_pred[:,1:])
         quartic_difference_forces = (1e2 * tf.square(y_true[:,1:] - y_pred[:,1:])) ** 2
 
-        loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(square_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
+        # loss = loss_ratio * tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(square_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
+        loss = loss_ratio*tf.reduce_mean(squared_difference_energies, axis=-1) + tf.reduce_mean(abs_difference_forces, axis=-1) + tf.reduce_mean(quartic_difference_forces, axis=-1)
         return loss
     return my_loss_fn
 
