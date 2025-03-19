@@ -53,10 +53,10 @@ export WANDB_MODE=offline # no internet connection during calculation on nodes
 # For data readin in kgcnn
 export BABEL_DATADIR="/usr/local/run/openbabel-2.4.1"
 
-# source /home/cschmidt/miniconda3/bin/activate excited_states_NN_kgcnn
-# conda activate excited_states_NN_kgcnn
-source /home/lpetersen/anaconda_interpreter/etc/profile.d/conda.sh # from lukas, this is for forces <------
-conda activate kgcnn_new # just for testing force - doesnt work for energies <-----------------------------
+source /home/cschmidt/miniconda3/bin/activate excited_states_NN_kgcnn
+conda activate excited_states_NN_kgcnn
+# source /home/lpetersen/anaconda_interpreter/etc/profile.d/conda.sh # from lukas, this is for forces <------
+# conda activate kgcnn_new # just for testing force - doesnt work for energies <-----------------------------
 
 # set OpenMP parallel threads variable:
 export OMP_NUM_THREADS=$cores

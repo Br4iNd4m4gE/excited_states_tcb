@@ -94,14 +94,14 @@ def parse_single_file(file, n_atoms, lines_to_skip=1, cutoff=None, every_nth=1):
 
             mol_geoms = np.empty((n_atoms, 7))
             #print(mol_geoms.shape)
-            tgt = [np.float32(l) for l in lines[0].rstrip().split()]
+            tgt = [float(l) for l in lines[0].rstrip().split()]
             if len(tgt) == 1:
                 tgt_data.append(tgt[0])
             else: 
                 tgt_data.append(tgt)
             
             for at_idx, l in enumerate(lines[1: -1]):                    
-                vals = [np.float32(i) for i in l.split()]
+                vals = [float(i) for i in l.split()]
                 mol_geoms[at_idx] = np.asarray(vals+[0.0] * (7 - len(vals)))
             geom_data.append(mol_geoms)
     return np.asarray(geom_data, dtype=np.float32), np.asarray(tgt_data, dtype=np.float32)
@@ -220,7 +220,7 @@ def load_data_excited_states_forces(inputfile, lines_to_skip: int, training_bool
             comp_tmp = []
             for _ in range(n_atoms):
                 line = data.readline()
-                line_split = [np.float32(n) for n in line.split()[1:]]
+                line_split = [float(n) for n in line.split()[1:]]
                 coords = [A2Bohr * n for n in line_split[:3]]
                 coords.append(line_split[3]) # esp
                 comp_tmp.append(coords)

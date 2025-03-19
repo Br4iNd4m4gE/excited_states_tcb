@@ -12,5 +12,8 @@
     "hp_layers_max": 6,
     "hp_layers_step": 1,
     "hp_initial_lr": [1e-3, 5e-4, 1e-4],
-    "hp_loss_ratio": [1e-2, 5e-3, 1e-3, 5e-4]
+    "hp_loss_ratio": [1e-2, 5e-3, 1e-3, 5e-4],
+
+    "inv_layer_cutoff": "False",
+    "inv_layer_cutoff_value": 0.1
   }
