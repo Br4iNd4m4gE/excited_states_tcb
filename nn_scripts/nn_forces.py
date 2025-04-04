@@ -93,7 +93,8 @@ x, y, n_atoms, _ = load_data_excited_states_forces(inputfile, lines_to_skip)
 
 # Generate train and test sets (y_train includes total energy and all forces)
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)
-x_train, y_train, x_test, y_test = tf.convert_to_tensor(x_train, dtype=tf.float32), tf.convert_to_tensor(y_train, dtype=tf.float32), tf.convert_to_tensor(x_test, dtype=tf.float32), tf.convert_to_tensor(y_test, dtype=tf.float32)
+# x_train, y_train, x_test, y_test = tf.convert_to_tensor(x_train, dtype=tf.float32), tf.convert_to_tensor(y_train, dtype=tf.float32), tf.convert_to_tensor(x_test, dtype=tf.float32), tf.convert_to_tensor(y_test, dtype=tf.float32)
+x_train, y_train, x_test, y_test = tf.convert_to_tensor(x_train), tf.convert_to_tensor(y_train), tf.convert_to_tensor(x_test), tf.convert_to_tensor(y_test)
 
 # Scale the output data
 scaler = StandardScaler(with_std=False)	# without std the performance was better, distribution is already good apparently

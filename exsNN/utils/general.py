@@ -195,7 +195,10 @@ def load_data_excited_states_forces(inputfile, lines_to_skip: int, training_bool
     gets coords in Angstrom, forces in , energy in Hartree
     returns coords in Bohr, forces in Hartree/Bohr, energy in Hartree
 
-    note: if the training_bool is set to False, the function skips the read_in of the energy line
+    lines_to_skip: comment lines before (!!!!!) the first geometry -> usually 1, becuase first line is energy (the empty line is not counted)
+    training_bool: if True, the first line is read in (energy), if False, the first line is skipped (used for testing on data without labels)
+
+    note: if the training_bool is set to False, the function skips the read_in of the energy line (used for testing on data without labels!)
     """
 
     A2Bohr = unit_conversions['A2Bohr']
@@ -215,8 +218,9 @@ def load_data_excited_states_forces(inputfile, lines_to_skip: int, training_bool
             tmpy = []
             if training_bool: # if the first line exists (containing energy)
                 energy = data.readline()
-                energy_total = np.sum([np.float32(energy) for energy in energy.split()]) # it was only "sum"
-                tmpy.append(energy_total) # Fehlersuche
+                # energy_total = np.sum([np.float32(energy) for energy in energy.split()]) # it was only "sum"
+                energy_total = sum([float(energy) for energy in energy.split()])
+                tmpy.append(energy_total)
             comp_tmp = []
             for _ in range(n_atoms):
                 line = data.readline()
@@ -224,7 +228,7 @@ def load_data_excited_states_forces(inputfile, lines_to_skip: int, training_bool
                 coords = [A2Bohr * n for n in line_split[:3]]
                 coords.append(line_split[3]) # esp
                 comp_tmp.append(coords)
-                tmpy.extend(line_split[4:]) # forces
+                tmpy.extend(line_split[4:7]) # forces
             x.append(comp_tmp)
             if training_bool:
                 y.append(tmpy)
