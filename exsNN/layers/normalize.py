@@ -105,4 +105,5 @@ class NormalizationLayer(tf.keras.layers.Layer):
         self.mean = mean
         self.var = var
     def call(self, inputs):
-        return (inputs - self.mean) / np.sqrt(self.var)
+        # return (inputs - self.mean) / np.sqrt(self.var)
+        return tf.math.divide_no_nan((inputs - self.mean),  np.sqrt(self.var))

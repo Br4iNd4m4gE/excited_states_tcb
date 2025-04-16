@@ -219,7 +219,8 @@ def load_data_excited_states_forces(inputfile, lines_to_skip: int, training_bool
             if training_bool: # if the first line exists (containing energy)
                 energy = data.readline()
                 # energy_total = np.sum([np.float32(energy) for energy in energy.split()]) # it was only "sum"
-                energy_total = sum([float(energy) for energy in energy.split()])
+                # energy_total = sum([float(energy) for energy in energy.split()]) # correct line
+                energy_total = float(energy.split()[0]) + float(energy.split()[1]) + float(energy.split()[2]) # <---------- bugsearch
                 tmpy.append(energy_total)
             comp_tmp = []
             for _ in range(n_atoms):
