@@ -102,6 +102,8 @@ def parse_single_file(file, n_atoms, lines_to_skip=1, cutoff=None, every_nth=1):
             
             for at_idx, l in enumerate(lines[1: -1]):                    
                 vals = [float(i) for i in l.split()]
+                # Limit to maximum 7 values to fit the array structure
+                vals = vals[:5]
                 mol_geoms[at_idx] = np.asarray(vals+[0.0] * (7 - len(vals)))
             geom_data.append(mol_geoms)
     return np.asarray(geom_data, dtype=np.float32), np.asarray(tgt_data, dtype=np.float32)
