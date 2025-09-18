@@ -28,8 +28,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-g", "--gpuid", type=int)
 ap.add_argument("-f", "--file", required=True, help="Path to the input file")
 ap.add_argument("-m", "--model", required=True, help="Path to the saved model")
-ap.add_argument("-se", "--save_e", required=False, help="Save energy and oscillator strength in separate files", default="save_energy.txt")
-ap.add_argument("-sf", "--save_f", required=False, help="Save forces and oscillator strength in separate files", default="save_forces.txt")
+ap.add_argument("-se", "--save_e", required=False, help="Save energy and oscillator strength in separate files", action="store_true")
+ap.add_argument("-sf", "--save_f", required=False, help="Save forces and oscillator strength in separate files", action="store_true")
 # ap.add_argument("-o", "--output", required=True, help="Output file for the predictions")
 ap.add_argument("-l", "--loss_ratio", required=False, type=float, help="Loss ratio for the optimizer", default=0.001)
 ap.add_argument("-nt", "--no_targets", required=False, help="If the input file is a training data file (first line is energy)", action="store_true")
@@ -42,6 +42,10 @@ set_gpu([args.gpuid])          ###############  wichtig !!
 
 # Load unit conversions
 A2Bohr = unit_conversions["A2Bohr"]
+
+# Define save files
+energy_predictions_file = 'energy_predictions.txt'
+force_predictions_file = 'force_predictions.txt'
 
 # Load model
 model_path = args.model
@@ -107,7 +111,7 @@ if targets_exist:
 
 # Save the predictions
 if args.save_f:
-    output_file = args.save_f
+    output_file = force_predictions_file
     with open(output_file, "w") as f:
         f.write("Forces [eV/A]\n")
         for i in range(len(forces_pred)):
@@ -116,13 +120,22 @@ if args.save_f:
     print(f"Force predictions saved to {output_file}")
 
 if args.save_e:
-    output_file = args.save_e
+    output_file = energy_predictions_file
     with open(output_file, "w") as f:
-        f.write("Total Energy [eV]\n")
+        # f.write("Total Energy [eV]\n")
         for i in range(len(prediction[:, 0])):
             f.write(f"{prediction[i, 0]}\n")
 
     print(f"Energy predictions saved to {output_file}")
+
+    # save the refrence values
+    output_file_ref = "energy_ref.txt"
+    with open(output_file_ref, "w") as f:
+        # f.write("Total Energy [eV]\n")
+        for i in range(len(y[:, 0])):
+            f.write(f"{y[i, 0]}\n")
+
+    print(f"Reference energy values saved to {output_file_ref}")
 
 if targets_exist:
     ## Plot predictions vs true values

@@ -1,11 +1,11 @@
 #!/home/cschmidt/miniconda3/envs/dftb_workflow/bin/python
+# filepath: /home/cschmidt/bin_public/excited_states_networks/evaluation_scripts/visualize_forceEnergy_training_result.sh
 
 # Script to create heatmaps for energy and force predictions vs reference values
 # Run this script in a directory containing:
-# - energy_predictions.txt
-# - energy_ref.txt  
-# - force_predictions.txt
-# - force_ref.txt
+# - energy_predictions.txt and energy_ref.txt (for energy heatmap)
+# - force_predictions.txt and force_ref.txt (for force heatmap)
+# Script will create heatmaps only for available data pairs
 
 import os
 import numpy as np
@@ -19,35 +19,66 @@ threshold = 100  # Minimum count for force heatmap
 # Conversion factors
 EV_TO_KCAL_MOL = 23.06052  # 1 eV = 23.06052 kcal/mol
 
-def load_predictions_and_references():
-    """Load prediction and reference data from text files"""
+def check_file_availability():
+    """Check which files are available and return availability status"""
+    energy_files = ['energy_predictions.txt', 'energy_ref.txt']
+    force_files = ['force_predictions.txt', 'force_ref.txt']
     
-    # Check if files exist
-    required_files = ['energy_predictions.txt', 'energy_ref.txt', 'force_predictions.txt', 'force_ref.txt']
-    missing_files = [f for f in required_files if not os.path.exists(f)]
+    energy_available = all(os.path.exists(f) for f in energy_files)
+    force_available = all(os.path.exists(f) for f in force_files)
     
-    if missing_files:
-        print(f"Error: Missing files: {missing_files}")
-        return None, None, None, None
+    if energy_available:
+        print("✓ Energy files found: energy_predictions.txt, energy_ref.txt")
+    else:
+        missing_energy = [f for f in energy_files if not os.path.exists(f)]
+        print(f"✗ Energy files missing: {missing_energy}")
     
-    # Load energy data and convert eV to kcal/mol
-    energy_pred = np.loadtxt('energy_predictions.txt') * EV_TO_KCAL_MOL
-    energy_ref = np.loadtxt('energy_ref.txt') * EV_TO_KCAL_MOL
+    if force_available:
+        print("✓ Force files found: force_predictions.txt, force_ref.txt")
+    else:
+        missing_force = [f for f in force_files if not os.path.exists(f)]
+        print(f"✗ Force files missing: {missing_force}")
     
-    # Convert to relative energies (subtract minimum)
-    energy_min = min(energy_pred.min(), energy_ref.min())
-    energy_pred_rel = energy_pred - energy_min
-    energy_ref_rel = energy_ref - energy_min
+    if not energy_available and not force_available:
+        print("Error: No complete data pairs found!")
+        return False, False
     
-    # Load force data (unchanged)
-    force_pred = np.loadtxt('force_predictions.txt') * EV_TO_KCAL_MOL
-    force_ref = np.loadtxt('force_ref.txt') * EV_TO_KCAL_MOL
-    
-    print(f"Loaded {len(energy_pred)} energy predictions (converted to relative energies)")
-    print(f"Energy range: {energy_pred_rel.min():.1f} to {energy_pred_rel.max():.1f} kcal/mol")
-    print(f"Loaded {len(force_pred)} force predictions")
-    
-    return energy_pred_rel, energy_ref_rel, force_pred, force_ref
+    return energy_available, force_available
+
+def load_energy_data():
+    """Load energy prediction and reference data"""
+    try:
+        # Load energy data and convert eV to kcal/mol
+        energy_pred = np.loadtxt('energy_predictions.txt') * EV_TO_KCAL_MOL
+        energy_ref = np.loadtxt('energy_ref.txt') * EV_TO_KCAL_MOL
+        
+        # Convert to relative energies (subtract minimum)
+        energy_min = min(energy_pred.min(), energy_ref.min())
+        energy_pred_rel = energy_pred - energy_min
+        energy_ref_rel = energy_ref - energy_min
+        
+        print(f"Loaded {len(energy_pred)} energy predictions (converted to relative energies)")
+        print(f"Energy range: {energy_pred_rel.min():.1f} to {energy_pred_rel.max():.1f} kcal/mol")
+        
+        return energy_pred_rel, energy_ref_rel
+    except Exception as e:
+        print(f"Error loading energy data: {e}")
+        return None, None
+
+def load_force_data():
+    """Load force prediction and reference data"""
+    try:
+        # Load force data and convert eV/A to kcal/mol/A
+        force_pred = np.loadtxt('force_predictions.txt') * EV_TO_KCAL_MOL
+        force_ref = np.loadtxt('force_ref.txt') * EV_TO_KCAL_MOL
+        
+        print(f"Loaded {len(force_pred)} force predictions")
+        print(f"Force range: {force_pred.min():.1f} to {force_pred.max():.1f} kcal/mol/Å")
+        
+        return force_pred, force_ref
+    except Exception as e:
+        print(f"Error loading force data: {e}")
+        return None, None
 
 def create_heatmap(predictions, references, title, unit, save_name, min_count=1):
     """Create heatmap plot matching data_plotter.py style"""
@@ -74,10 +105,6 @@ def create_heatmap(predictions, references, title, unit, save_name, min_count=1)
         cbar.set_label(f'Frequency (≥{min_count})', fontsize=LABELSIZE)
     else:
         cbar.set_label('Frequency', fontsize=LABELSIZE)
-    
-    # # Labels
-    # plt.xlabel(f"Prediction {title} [{unit}]", fontsize=FONTSIZE)
-    # plt.ylabel(f"Reference {title} [{unit}]", fontsize=FONTSIZE)
     
     # Perfect prediction line (diagonal)
     value_min = min(predictions.min(), references.min())
@@ -135,22 +162,40 @@ def create_heatmap(predictions, references, title, unit, save_name, min_count=1)
 def main():
     """Main function to create heatmaps"""
     
-    print("Loading prediction and reference data...")
-    energy_pred, energy_ref, force_pred, force_ref = load_predictions_and_references()
+    print("Checking file availability...")
+    energy_available, force_available = check_file_availability()
     
-    if energy_pred is None:
+    if not energy_available and not force_available:
         return
     
-    print("Creating energy heatmap...")
-    create_heatmap(energy_pred, energy_ref, "Energy", r"$kcal\,mol^{-1}$", "energy")
-
-    print("Creating force heatmap (normal)...")
-    create_heatmap(force_pred, force_ref, "Forces", r"$kcal\,mol^{-1}\,\AA^{-1}$", "forces")
-
-    print("Creating force heatmap (with threshold)...")
-    create_heatmap(force_pred, force_ref, "Forces", r"$kcal\,mol^{-1}\,\AA^{-1}$", "forces_threshold", min_count=threshold)
-
-    print("Done! Created energy_heatmap.png, forces_heatmap.png and forces_threshold_heatmap.png")
+    created_plots = []
+    
+    # Process energy data if available
+    if energy_available:
+        print("\nProcessing energy data...")
+        energy_pred, energy_ref = load_energy_data()
+        if energy_pred is not None and energy_ref is not None:
+            print("Creating energy heatmap...")
+            create_heatmap(energy_pred, energy_ref, "Energy", r"$kcal\,mol^{-1}$", "energy")
+            created_plots.append("energy_heatmap.png")
+    
+    # Process force data if available
+    if force_available:
+        print("\nProcessing force data...")
+        force_pred, force_ref = load_force_data()
+        if force_pred is not None and force_ref is not None:
+            print("Creating force heatmap (normal)...")
+            create_heatmap(force_pred, force_ref, "Forces", r"$kcal\,mol^{-1}\,\AA^{-1}$", "forces")
+            created_plots.append("forces_heatmap.png")
+            
+            print("Creating force heatmap (with threshold)...")
+            create_heatmap(force_pred, force_ref, "Forces", r"$kcal\,mol^{-1}\,\AA^{-1}$", "forces_threshold", min_count=threshold)
+            created_plots.append("forces_threshold_heatmap.png")
+    
+    # Summary
+    print(f"\nDone! Created {len(created_plots)} plot(s):")
+    for plot in created_plots:
+        print(f"  - {plot}")
 
 if __name__ == "__main__":
     main()
