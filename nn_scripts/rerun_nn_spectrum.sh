@@ -24,6 +24,7 @@ ap.add_argument("-g", "--gpuid", type=int)
 ap.add_argument("-f", "--file", required=True, help="Path to the input file")
 ap.add_argument("-m", "--model", required=True, help="Path to the model", default=None)
 ap.add_argument("-s", "--save", action="store_true", help="Save energy and oscillator strength in separate files", default=True)
+ap.add_argument("-sp", "--save_prefix", help="Prefix for save file.", default="")
 ap.add_argument("-l", "--lines", type=int, help="Number of (comment) lines to skip in the input file", default=0)
 args = ap.parse_args()
 set_gpu([args.gpuid])          ###############  wichtig !!
@@ -89,33 +90,42 @@ predlist = pred.numpy()
 pred_eV = predlist[:,0] * EhtoeV
 print(len(pred_eV))
 
-# Plot histogram
-try:
-	# Create histogram with normalization
-	n, bins, patches = plt.hist(pred_eV, bins=100, weights=predlist[:, 1], alpha=0.5, density=True) #,range=[2.5,4.5])
-	binwidth = bins[1] - bins[0]
-	binmids = bins + 0.5 * binwidth
+# # Plot histogram
+# try:
+# 	# Create histogram with normalization
+# 	n, bins, patches = plt.hist(pred_eV, bins=100, weights=predlist[:, 1], alpha=0.5, density=True) #,range=[2.5,4.5])
+# 	binwidth = bins[1] - bins[0]
+# 	binmids = bins + 0.5 * binwidth
 
-	# Fit Gaussian
-	popt, pcov = curve_fit(gaussian, binmids[:-1], n, p0=[2, 3.5, 0.5])
-	plt.plot(binmids[:-1], gaussian(binmids[:-1], *popt), color='r')
-	print(f"Mean: {popt[1]}, Variance: {popt[2]}")
-	plt.xlabel("Excitation Energy [eV]")
-	plt.ylabel("Count [a.u.]")
-	# plt.legend()
+# 	# Fit Gaussian
+# 	popt, pcov = curve_fit(gaussian, binmids[:-1], n, p0=[2, 3.5, 0.5])
+# 	plt.plot(binmids[:-1], gaussian(binmids[:-1], *popt), color='r')
+# 	print(f"Mean: {popt[1]}, Variance: {popt[2]}")
+# 	plt.xlabel("Excitation Energy [eV]")
+# 	plt.ylabel("Count [a.u.]")
+# 	# plt.legend()
 
-	fig_name = "rerun_histogram.png"
-	fig_path = join(parent_path, fig_name)
-	plt.savefig(fig_path)
-except:
-	print("Gaussian fit failed.")
-	pass
+# 	fig_name = "rerun_histogram.png"
+# 	fig_path = join(parent_path, fig_name)
+# 	plt.savefig(fig_path)
+# except:
+# 	print("Gaussian fit failed.")
+# 	pass
 
 # Store energy and osc. str. data in separate files
 if keep_energy_and_osc:
-	file_energy_name = "rerun_energies.txt"
-	file_osc_str_name = "rerun_osc_str.txt"
+	file_energy_name = f"{args.save_prefix}_nn_pred_energy.dat"
+	file_osc_str_name = f"{args.save_prefix}_nn_pred_osc_str.dat"
+	file_energy_osc_str_name = f"{args.save_prefix}_nn_pred_energy_osc_str.dat"
+
 	file_energy_path = join(parent_path, file_energy_name)
 	file_osc_str_path = join(parent_path, file_osc_str_name)
-	np.savetxt(file_energy_path, pred_eV)
-	np.savetxt(file_osc_str_path, predlist[:, 1])
+	file_energy_osc_str_path = join(parent_path, file_energy_osc_str_name)
+
+	# np.savetxt(file_energy_path, pred_eV)
+	# np.savetxt(file_osc_str_path, predlist[:, 1])
+
+	# Save both in a single file with a headline: "Energy (eV) Oscillator Strength"
+	with open(file_energy_osc_str_path, "w") as f:
+		f.write("# Energy (eV)    Oscillator Strength\n")
+		np.savetxt(f, np.c_[pred_eV, predlist[:, 1]])
