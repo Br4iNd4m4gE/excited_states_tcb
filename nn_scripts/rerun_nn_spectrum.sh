@@ -26,6 +26,7 @@ ap.add_argument("-m", "--model", required=True, help="Path to the model", defaul
 ap.add_argument("-s", "--save", action="store_true", help="Save energy and oscillator strength in separate files", default=True)
 ap.add_argument("-sp", "--save_prefix", help="Prefix for save file.", default="")
 ap.add_argument("-l", "--lines", type=int, help="Number of (comment) lines to skip in the input file", default=0)
+ap.add_argument("-b", "--batch_size", type=int, default=1000, help="Batch size for prediction")
 args = ap.parse_args()
 set_gpu([args.gpuid])          ###############  wichtig !!
 
@@ -35,6 +36,7 @@ keep_energy_and_osc = args.save # you want energy and osc. str. saved in separat
 parent_path = os.getcwd() # path for evaluation
 data_path = args.file
 lines_to_skip = args.lines # != 0 in case of comment lines in data (e.g. energy line)
+batch_size = args.batch_size
 
 ## Load model
 model_path = args.model
@@ -57,6 +59,7 @@ if not ntotal.is_integer():
     raise ValueError("Number of Lines incorrect.")
 
 ntotal = int(ntotal)
+print(f"Total number of structures: {ntotal}")
 
 ## 1. Load data
 print("loading")
@@ -64,14 +67,14 @@ xyz_data = np.zeros((ntotal, natoms, 4))
 
 # Read xyz data and ESP
 with open(data_path, "r") as data:
-	for i in range(ntotal):
-		for j in range(natoms + lines_to_skip):
-			line = data.readline()
-			if lines_to_skip != 0: # skip comment lines in data (in case of e.g. energy line)
-				if j < lines_to_skip:
-					continue
-			xyz_data[i, j - lines_to_skip] = [float(x) for x in line.split()[1:]]
-		data.readline()
+    for i in range(ntotal):
+        for j in range(natoms + lines_to_skip):
+            line = data.readline()
+            if lines_to_skip != 0: # skip comment lines in data (in case of e.g. energy line)
+                if j < lines_to_skip:
+                    continue
+            xyz_data[i, j - lines_to_skip] = [float(x) for x in line.split()[1:]]
+        data.readline()
 print("loaded")
 
 xyz_data = np.asarray(xyz_data, dtype=np.float32)
@@ -80,52 +83,44 @@ xyz_data = np.asarray(xyz_data, dtype=np.float32)
 coords = xyz_data[:,:,:3] * A2Bohr
 esp    = xyz_data[:,:,3]
 
-x_data = (coords, esp) # for older models [coords, esp]
+# Predict energy and oscillator strength in batches
+print(f"Processing {ntotal} structures in batches of {batch_size}")
+n_batches = (ntotal + batch_size - 1) // batch_size
 
-# Predict energy and oscillator strength
-pred = model(x_data)
+predictions = []
+for i in range(n_batches):
+    start_idx = i * batch_size
+    end_idx = min((i + 1) * batch_size, ntotal)
+    
+    batch_coords = coords[start_idx:end_idx]
+    batch_esp = esp[start_idx:end_idx]
+    x_batch = (batch_coords, batch_esp)
+    
+    batch_pred = model(x_batch)
+    predictions.append(batch_pred)
+    print(f"Processed batch {i+1}/{n_batches} (structures {start_idx}-{end_idx-1})")
+
+# Concatenate all predictions
+pred = tf.concat(predictions, axis=0)
 predlist = pred.numpy()
 
 # Convert energy to eV
 pred_eV = predlist[:,0] * EhtoeV
-print(len(pred_eV))
-
-# # Plot histogram
-# try:
-# 	# Create histogram with normalization
-# 	n, bins, patches = plt.hist(pred_eV, bins=100, weights=predlist[:, 1], alpha=0.5, density=True) #,range=[2.5,4.5])
-# 	binwidth = bins[1] - bins[0]
-# 	binmids = bins + 0.5 * binwidth
-
-# 	# Fit Gaussian
-# 	popt, pcov = curve_fit(gaussian, binmids[:-1], n, p0=[2, 3.5, 0.5])
-# 	plt.plot(binmids[:-1], gaussian(binmids[:-1], *popt), color='r')
-# 	print(f"Mean: {popt[1]}, Variance: {popt[2]}")
-# 	plt.xlabel("Excitation Energy [eV]")
-# 	plt.ylabel("Count [a.u.]")
-# 	# plt.legend()
-
-# 	fig_name = "rerun_histogram.png"
-# 	fig_path = join(parent_path, fig_name)
-# 	plt.savefig(fig_path)
-# except:
-# 	print("Gaussian fit failed.")
-# 	pass
+print(f"Final prediction shape: {len(pred_eV)}")
 
 # Store energy and osc. str. data in separate files
 if keep_energy_and_osc:
-	file_energy_name = f"{args.save_prefix}_nn_pred_energy.dat"
-	file_osc_str_name = f"{args.save_prefix}_nn_pred_osc_str.dat"
-	file_energy_osc_str_name = f"{args.save_prefix}_nn_pred_energy_osc_str.dat"
+    file_energy_name = f"{args.save_prefix}_nn_pred_energy.dat"
+    file_osc_str_name = f"{args.save_prefix}_nn_pred_osc_str.dat"
+    file_energy_osc_str_name = f"{args.save_prefix}_nn_pred_energy_osc_str.dat"
 
-	file_energy_path = join(parent_path, file_energy_name)
-	file_osc_str_path = join(parent_path, file_osc_str_name)
-	file_energy_osc_str_path = join(parent_path, file_energy_osc_str_name)
+    file_energy_path = join(parent_path, file_energy_name)
+    file_osc_str_path = join(parent_path, file_osc_str_name)
+    file_energy_osc_str_path = join(parent_path, file_energy_osc_str_name)
 
-	# np.savetxt(file_energy_path, pred_eV)
-	# np.savetxt(file_osc_str_path, predlist[:, 1])
+    # Save both in a single file with a headline: "Energy (eV) Oscillator Strength"
+    with open(file_energy_osc_str_path, "w") as f:
+        f.write("# Energy (eV)    Oscillator Strength\n")
+        np.savetxt(f, np.c_[pred_eV, predlist[:, 1]])
 
-	# Save both in a single file with a headline: "Energy (eV) Oscillator Strength"
-	with open(file_energy_osc_str_path, "w") as f:
-		f.write("# Energy (eV)    Oscillator Strength\n")
-		np.savetxt(f, np.c_[pred_eV, predlist[:, 1]])
+print("Prediction completed successfully!")

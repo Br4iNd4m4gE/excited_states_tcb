@@ -5,6 +5,8 @@
 #$ -e train.err
 #$ -q gtx02a,gtx02b,gtx02c,gtx02d,gtx03a,gtx03b,gtx03c,gtx03d,gtx05a,gtx05b,gtx05c,gtx05d,gtx09a,gtx09b,gtx09c,gtx09d,gtx10a,gtx10b,gtx10c,gtx10d
 
+# this script sadly neds to be qsubbed
+
 script_path="/home/cschmidt/bin_public/excited_states_networks/nn_scripts/rerun_all_spectra_models.sh"
 
 # Which GPU?
